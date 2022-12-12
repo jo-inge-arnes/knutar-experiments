@@ -1,0 +1,59 @@
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(cladina)
+
+d <- read.table(
+  "~/datasets/human_penguin/explorepenguin_share_complete_cases.csv",
+  sep = ",", header = TRUE)
+d <- d %>%
+    drop_na(nwsize) %>%
+    drop_na(age) %>%
+    mutate(age_years = 2015 - age, age_dec = age_years)
+
+
+# Just to make is the same as the fields in the synthetic data
+d$Independent <- d$age_dec
+d$Dependent <- d$nwsize
+d$SignalMeasured <- d$Dependent
+
+```
+
+```{r}
+p <- ggplot(d, aes(Independent, Dependent)) + geom_point()
+p
+```
+
+```{r}
+target_nknots <- 7
+res <- choose_model(d, Dependent, Independent, max_nsknots = target_nknots)
+
+plot_model(d, Dependent, Independent, res$ns$model)
+plot_model(d, SignalMeasured, Independent, res$ns$model)
+plot_rstandard(d, res$ns$model)
+
+plot_model(d, Dependent, Independent, res$mfp$model)
+plot_model(d, SignalMeasured, Independent, res$mfp$model)
+plot_rstandard(d, res$mfp$model)
+
+plot_model(d, Dependent, Independent, res$ns_nu$model)
+plot_model(d, SignalMeasured, Independent, res$ns_nu$model)
+plot_rstandard(d, res$ns_nu$model)
+```
+
+```{r}
+target_nknots <- 7
+res <- choose_splines_thorough(d, Dependent, Independent, max_nknots = target_nknots)
+
+plot_model(d, Dependent, Independent, res$uniform$model)
+plot_model(d, SignalMeasured, Independent, res$uniform$model)
+plot_rstandard(d, res$uniform$model)
+
+plot_model(d, Dependent, Independent, res$distinct$model)
+plot_model(d, SignalMeasured, Independent, res$distinct$model)
+plot_rstandard(d, res$distinct$model)
+
+plot_model(d, Dependent, Independent, res$quantile$model)
+plot_model(d, SignalMeasured, Independent, res$quantile$model)
+plot_rstandard(d, res$quantile$model)
+```
