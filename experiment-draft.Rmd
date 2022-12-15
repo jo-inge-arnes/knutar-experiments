@@ -26,18 +26,19 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   
   suggested <- suggest_knotcount(d, Dependent, Independent, max_knots)
   nknots_default <-suggested$nknots
-  bic_default <- suggested$score
+  score_default <- suggested$score
   mod_default <- model_by_count(d, Dependent, Independent, nknots_default)
   
-  alt_mods <- choose_splines_thorough(d, Dependent, Independent, max_nknots = max_knots, verbose = FALSE) 
+'  
+  alt_mods <- choose_splines_thorough(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::AIC, verbose = FALSE) 
   
   mod_dist <- alt_mods$distinct$model
   mod_unif <- alt_mods$uniform$model
   mod_quant <- alt_mods$quantile$model
   
-  bic_dist <- alt_mods$distinct$score
-  bic_unif <- alt_mods$uniform$score
-  bic_quant <- alt_mods$quantile$score
+  score_dist <- alt_mods$distinct$score
+  score_unif <- alt_mods$uniform$score
+  score_quant <- alt_mods$quantile$score
   
   nknots_dist <- alt_mods$distinct$nknots
   nknots_unif <- alt_mods$uniform$nknots
@@ -47,14 +48,29 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   mse_dist <- sum((mod_dist$fitted.values - d$SignalRaw)^2) / n
   mse_unif <- sum((mod_unif$fitted.values - d$SignalRaw)^2) / n
   mse_quant <- sum((mod_quant$fitted.values - d$SignalRaw)^2) / n
+
+  res <- list(
+    "n" = n,
+    "gen_fn" = gen_fn$name,
+    "score_def" = score_default, "nknots_def" = nknots_default, "mse_def" = mse_default,
+    "score_dist" = score_dist, "nknots_dist" = nknots_dist, "mse_dist" = mse_dist,
+    "score_unif" = score_unif, "nknots_unif" = nknots_unif, "mse_unif" = mse_unif,
+    "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant)
+'
+  
+  res_quant <- choose_splines(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::AIC) 
+  mod_quant <- res_quant$model
+  nknots_quant <- length(res_quant$knots$knots)
+  score_quant <- res_quant$score
+  
+  mse_default <- sum((mod_default$fitted.values - d$SignalRaw)^2) / n
+  mse_quant <- sum((mod_quant$fitted.values - d$SignalRaw)^2) / n
   
   res <- list(
     "n" = n,
     "gen_fn" = gen_fn$name,
-    "score_def" = bic_default, "nknots_def" = nknots_default, "mse_def" = mse_default,
-    "score_dist" = bic_dist, "nknots_dist" = nknots_dist, "mse_dist" = mse_dist,
-    "score_unif" = bic_unif, "nknots_unif" = nknots_unif, "mse_unif" = mse_unif,
-    "score_quant" = bic_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant)
+    "score_def" = score_default, "nknots_def" = nknots_default, "mse_def" = mse_default,
+    "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant)  
   
   return(res)
 }
@@ -75,18 +91,40 @@ generator_sample_experiments <- function(gen_fn, sample_sizes, samples_per_set, 
 ```
 
 ```{r}
+knitr::knit_hooks$set(time_it = local({
+  now <- NULL
+  function(before, options) {
+    if (before) {
+      # record the current time before each chunk
+      now <<- Sys.time()
+    } else {
+      # calculate the time difference after a chunk
+      res <- difftime(Sys.time(), now)
+      # return a character string to show the time
+      paste("Time for this code chunk to run:", res)
+    }
+  }
+}))
+```
+
+```{r}
+#{r, time_it = TRUE}
 max_knots <- 5
-sample_sizes <- c(10, 20)
-samples_per_set <- 10
+sample_sizes <- c(100, 250)
+samples_per_set <- 100
 generators <- list(
   list("name"= "mm", "fn" = generate_michaelis_menten), 
   list("name" = "cos", "fn" = generate_cos))
 
 res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = sample_sizes, samples_per_set = samples_per_set, max_knots = max_knots)
 
-df_all_results <- bind_rows(res_df_list, .id = "generator_idex")
+df_all_results <- bind_rows(res_df_list, .id = "generator_index")
 ```
 
 ```{r}
-saveRDS(df_all_results, file="experiment-results.Rda")
+#saveRDS(df_all_results, file="experiment-results.Rda")
+```
+
+```{r}
+df_means <- df_all_results %>% group_by(generator_index, generator_sample_index) %>% summarise_at(vars(mse_def, mse_quant, score_def, score_quant), list(mean, sd))
 ```
