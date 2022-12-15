@@ -4,7 +4,7 @@ library(ggplot2)
 library(cladina)
 
 d <- read.table(
-  "~/datasets/human_penguin/explorepenguin_share_complete_cases.csv",
+  "c:\\\\datasets\\human_penguin\\explorepenguin_share_complete_cases.csv",
   sep = ",", header = TRUE)
 d <- d %>%
     drop_na(nwsize) %>%

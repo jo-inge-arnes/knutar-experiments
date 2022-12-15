@@ -1,0 +1,92 @@
+```{r}
+library(cladina)
+library(dplyr)
+
+```
+
+```{r}
+generate_michaelis_menten <- function(n) {
+  f_noise <- function(ys) {
+    return(rnorm(ys) * ys / 10)
+  }
+  
+  d <- generate_data(n, 1, 2, f_x_lognorm_dist, f_signal_michaelis_menten, f_noise)
+  return(d)
+}
+
+generate_cos <- function(n) {
+  d <- generate_data(n, 2, 2, f_x_rnorm_dist, f_signal_cos, f_noise_rnorm_scaled)
+  return(d)
+}
+```
+
+```{r}
+single_sample_experiment <- function(i, n, gen_fn, max_knots) {
+  d <- gen_fn$fn(n)
+  
+  suggested <- suggest_knotcount(d, Dependent, Independent, max_knots)
+  nknots_default <-suggested$nknots
+  bic_default <- suggested$score
+  mod_default <- model_by_count(d, Dependent, Independent, nknots_default)
+  
+  alt_mods <- choose_splines_thorough(d, Dependent, Independent, max_nknots = max_knots, verbose = FALSE) 
+  
+  mod_dist <- alt_mods$distinct$model
+  mod_unif <- alt_mods$uniform$model
+  mod_quant <- alt_mods$quantile$model
+  
+  bic_dist <- alt_mods$distinct$score
+  bic_unif <- alt_mods$uniform$score
+  bic_quant <- alt_mods$quantile$score
+  
+  nknots_dist <- alt_mods$distinct$nknots
+  nknots_unif <- alt_mods$uniform$nknots
+  nknots_quant <- alt_mods$quantile$nknots
+  
+  mse_default <- sum((mod_default$fitted.values - d$SignalRaw)^2) / n
+  mse_dist <- sum((mod_dist$fitted.values - d$SignalRaw)^2) / n
+  mse_unif <- sum((mod_unif$fitted.values - d$SignalRaw)^2) / n
+  mse_quant <- sum((mod_quant$fitted.values - d$SignalRaw)^2) / n
+  
+  res <- list(
+    "n" = n,
+    "gen_fn" = gen_fn$name,
+    "score_def" = bic_default, "nknots_def" = nknots_default, "mse_def" = mse_default,
+    "score_dist" = bic_dist, "nknots_dist" = nknots_dist, "mse_dist" = mse_dist,
+    "score_unif" = bic_unif, "nknots_unif" = nknots_unif, "mse_unif" = mse_unif,
+    "score_quant" = bic_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant)
+  
+  return(res)
+}
+
+multiple_sample_experiments <- function(n, gen_fn, rep_cnt, max_knots) {
+  res_list <- lapply(1:rep_cnt, single_sample_experiment, gen_fn = gen_fn, n = n, max_knots = max_knots)
+  res_df <- as.data.frame(data.table::rbindlist(res_list))
+  return(res_df)
+}
+
+generator_sample_experiments <- function(gen_fn, sample_sizes, samples_per_set, max_knots) {
+  res_df_list <- lapply(sample_sizes, multiple_sample_experiments, gen_fn = gen_fn, rep_cnt = samples_per_set, max_knots = max_knots)
+  
+  res_df <- bind_rows(res_df_list, .id = "generator_sample_index")
+  
+  return(res_df)
+}
+```
+
+```{r}
+max_knots <- 5
+sample_sizes <- c(10, 20)
+samples_per_set <- 10
+generators <- list(
+  list("name"= "mm", "fn" = generate_michaelis_menten), 
+  list("name" = "cos", "fn" = generate_cos))
+
+res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = sample_sizes, samples_per_set = samples_per_set, max_knots = max_knots)
+
+df_all_results <- bind_rows(res_df_list, .id = "generator_idex")
+```
+
+```{r}
+saveRDS(df_all_results, file="experiment-results.Rda")
+```
