@@ -128,7 +128,7 @@ samples_per_set <- 250
 generators <- list(
   list("name"= "x_div_x", "fn" = generate_x_div_x_plus_half), 
   list("name" = "cos", "fn" = generate_cos),
-  list("name" = "mm", "fn" = genrate_mm))
+  list("name" = "mm", "fn" = generate_mm))
 
 suppressWarnings({
   res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = sample_sizes, samples_per_set = samples_per_set, max_knots = max_knots)
@@ -138,7 +138,7 @@ df_all_results <- bind_rows(res_df_list, .id = "generator_index")
 ```
 
 ```{r}
-saveRDS(df_all_results, file="experiment-results-02.Rda")
+saveRDS(df_all_results, file="experiment-results-04.Rda")
 ```
 
 ```{r}
