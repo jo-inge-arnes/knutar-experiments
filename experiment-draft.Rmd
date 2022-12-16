@@ -5,17 +5,31 @@ library(dplyr)
 ```
 
 ```{r}
-generate_michaelis_menten <- function(n) {
-  f_noise <- function(ys) {
-    return(rnorm(ys) * ys / 10)
-  }
-  
-  d <- generate_data(n, 1, 2, f_x_lognorm_dist, f_signal_michaelis_menten, f_noise)
+
+f_noise_1 <- function(ys) {
+  return((rnorm(length(ys)) / 10) * ys)
+}
+
+f_x_dist  <- function(n) {
+  return(rlnorm(n, mean = 0, sd = 0.5))
+}
+
+generate_x_div_x_plus_half <- function(n) {
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_x_div_half_plus_x, f_noise_1)
   return(d)
 }
 
 generate_cos <- function(n) {
   d <- generate_data(n, 2, 2, f_x_rnorm_dist, f_signal_cos, f_noise_rnorm_scaled)
+  return(d)
+}
+
+f_noise_2 <- function(ys) {
+  return(rnorm(ys) * ys / 10)
+}
+
+generate_mm <- function(n) {
+  d <- generate_data(n, 1, 3, f_x_lognorm_dist, f_signal_michaelis_menten, f_noise_2)
   return(d)
 }
 ```
@@ -24,7 +38,7 @@ generate_cos <- function(n) {
 single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   d <- gen_fn$fn(n)
   
-  suggested <- suggest_knotcount(d, Dependent, Independent, max_knots)
+  suggested <- suggest_knotcount(d, Dependent, Independent, max_knots, stats::BIC)
   nknots_default <-suggested$nknots
   score_default <- suggested$score
   mod_default <- model_by_count(d, Dependent, Independent, nknots_default)
@@ -58,13 +72,13 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
     "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant)
 '
   
-  res_quant <- choose_splines(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::AIC) 
+  res_quant <- choose_splines(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::BIC) 
   mod_quant <- res_quant$model
   nknots_quant <- length(res_quant$knots$knots)
   score_quant <- res_quant$score
   
-  mse_default <- sum((mod_default$fitted.values - d$SignalRaw)^2) / n
-  mse_quant <- sum((mod_quant$fitted.values - d$SignalRaw)^2) / n
+  mse_default <- sum((mod_default$fitted.values - d$SignalMeasured)^2) / n
+  mse_quant <- sum((mod_quant$fitted.values - d$SignalMeasured)^2) / n
   
   res <- list(
     "n" = n,
@@ -107,24 +121,81 @@ knitr::knit_hooks$set(time_it = local({
 }))
 ```
 
-```{r}
-#{r, time_it = TRUE}
+```{r, time_it = TRUE}
 max_knots <- 5
-sample_sizes <- c(100, 250)
-samples_per_set <- 100
+sample_sizes <- c(100, 200, 300)
+samples_per_set <- 250
 generators <- list(
-  list("name"= "mm", "fn" = generate_michaelis_menten), 
-  list("name" = "cos", "fn" = generate_cos))
+  list("name"= "x_div_x", "fn" = generate_x_div_x_plus_half), 
+  list("name" = "cos", "fn" = generate_cos),
+  list("name" = "mm", "fn" = genrate_mm))
 
-res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = sample_sizes, samples_per_set = samples_per_set, max_knots = max_knots)
+suppressWarnings({
+  res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = sample_sizes, samples_per_set = samples_per_set, max_knots = max_knots)
+})
 
 df_all_results <- bind_rows(res_df_list, .id = "generator_index")
 ```
 
 ```{r}
-#saveRDS(df_all_results, file="experiment-results.Rda")
+saveRDS(df_all_results, file="experiment-results-02.Rda")
 ```
 
 ```{r}
-df_means <- df_all_results %>% group_by(generator_index, generator_sample_index) %>% summarise_at(vars(mse_def, mse_quant, score_def, score_quant), list(mean, sd))
+df_means <- df_all_results %>%
+  group_by(generator_index, generator_sample_index) %>%
+  summarise_at(vars(mse_def, mse_quant, score_def, score_quant, n), list(mean = mean, sd = sd))
+
+alpha = 0.05
+
+df_means <- df_means %>% 
+  mutate(mse_def_sde = mse_def_sd / sqrt(n_mean)) %>%
+  mutate(mse_quant_sde = mse_quant_sd / sqrt(n_mean)) %>%
+  mutate(score_def_sde = score_def_sd / sqrt(n_mean)) %>%           
+  mutate(score_quant_sde = score_quant_sd / sqrt(n_mean)) %>%
+  mutate(mse_def_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_def_sde) %>%
+  mutate(mse_quant_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_quant_sde) %>%
+  mutate(score_def_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * score_def_sde) %>%
+  mutate(score_quant_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * score_quant_sde)
+  
+df_means <- df_means %>% 
+  mutate(mse_def_lower = mse_def_mean - mse_def_conf) %>%
+  mutate(mse_def_upper = mse_def_mean + mse_def_conf) %>%
+  mutate(mse_quant_lower = mse_quant_mean - mse_quant_conf) %>%
+  mutate(mse_quant_upper = mse_quant_mean + mse_quant_conf) %>%
+  mutate(score_def_lower = score_def_mean - score_def_conf) %>%
+  mutate(score_def_upper = score_def_mean + score_def_conf) %>%
+  mutate(score_quant_lower = score_quant_mean - score_quant_conf) %>%
+  mutate(score_quant_upper = score_quant_mean + score_quant_conf)
+
+```
+
+```{r}
+library(ggplot2)
+
+df_1 <- df_all_results[df_all_results$generator_index == 1 & df_all_results$generator_sample_index == 1, ]
+
+df_2 <- df_all_results[df_all_results$generator_index == 2 & df_all_results$generator_sample_index == 1, ]
+
+hist(df_1$score_def)
+hist(df_1$score_quant)
+
+hist(df_2$score_def)
+hist(df_2$score_quant)
+
+hist(df_1$mse_def)
+hist(df_1$mse_quant)
+
+hist(df_2$mse_def)
+hist(df_2$mse_quant)
+```
+
+```{r}
+print(t.test(df_1$score_def, df_1$score_quant))
+print(t.test(df_2$score_def, df_2$score_quant))
+
+
+print(t.test(df_1$mse_def, df_1$mse_quant))
+print(t.test(df_2$mse_def, df_2$mse_quant))
+
 ```

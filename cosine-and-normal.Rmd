@@ -12,7 +12,7 @@ ggplot(d, aes(Independent, Dependent)) + geom_point()
 ```
 
 ```{r}
-target_nknots <- 7
+target_nknots <- 5
 res <- choose_model(d, Dependent, Independent, max_nsknots = target_nknots)
 
 plot_model(d, Dependent, Independent, res$ns$model)
@@ -29,7 +29,7 @@ plot_rstandard(d, res$ns_nu$model)
 ```
 
 ```{r}
-target_nknots <- 7
+target_nknots <- 5
 res <- choose_splines_thorough(d, Dependent, Independent, max_nknots = target_nknots)
 
 plot_model(d, Dependent, Independent, res$uniform$model)
