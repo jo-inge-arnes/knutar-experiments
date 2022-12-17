@@ -80,11 +80,26 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   mse_default <- sum((mod_default$fitted.values - d$SignalMeasured)^2) / n
   mse_quant <- sum((mod_quant$fitted.values - d$SignalMeasured)^2) / n
   
+  
+  # Create 500 evenly spaced values between lower and upper independent value
+  # Compute MSE for these values for each model
+  
+  x <- data.frame(Independent = seq(from = min(d$Independent), to = max(d$Independent), length.out = 500))
+  y <- unlist(lapply(x$Independent, gen_fn$curve_fn))
+
+  y_hat <- predict(mod_default, newdata = x)
+  mse_def_curve <- sum((y_hat - y)^2) / n
+  
+  y_hat <- predict(mod_quant, newdata = x)
+  mse_quant_curve <- sum((y_hat - y)^2) / n
+  
+  # Return a result row as a list
+  
   res <- list(
     "n" = n,
     "gen_fn" = gen_fn$name,
-    "score_def" = score_default, "nknots_def" = nknots_default, "mse_def" = mse_default,
-    "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant)  
+    "score_def" = score_default, "nknots_def" = nknots_default, "mse_def" = mse_default, "mse_def_curve" = mse_def_curve,
+    "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant, "mse_quant_curve" = mse_quant_curve)  
   
   return(res)
 }
@@ -105,30 +120,13 @@ generator_sample_experiments <- function(gen_fn, sample_sizes, samples_per_set, 
 ```
 
 ```{r}
-knitr::knit_hooks$set(time_it = local({
-  now <- NULL
-  function(before, options) {
-    if (before) {
-      # record the current time before each chunk
-      now <<- Sys.time()
-    } else {
-      # calculate the time difference after a chunk
-      res <- difftime(Sys.time(), now)
-      # return a character string to show the time
-      paste("Time for this code chunk to run:", res)
-    }
-  }
-}))
-```
-
-```{r, time_it = TRUE}
 max_knots <- 5
-sample_sizes <- c(100, 200, 300)
-samples_per_set <- 250
+sample_sizes <- c(50, 150, 250)
+samples_per_set <- 100
 generators <- list(
-  list("name"= "x_div_x", "fn" = generate_x_div_x_plus_half), 
-  list("name" = "cos", "fn" = generate_cos),
-  list("name" = "mm", "fn" = generate_mm))
+  list("name"= "x_div_x", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x), 
+  list("name" = "cos", "fn" = generate_cos, "curve_fn" = f_signal_cos),
+  list("name" = "mm", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten))
 
 suppressWarnings({
   res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = sample_sizes, samples_per_set = samples_per_set, max_knots = max_knots)
@@ -138,23 +136,27 @@ df_all_results <- bind_rows(res_df_list, .id = "generator_index")
 ```
 
 ```{r}
-saveRDS(df_all_results, file="experiment-results-04.Rda")
+saveRDS(df_all_results, file="experiment-results-05.Rda")
 ```
 
 ```{r}
 df_means <- df_all_results %>%
   group_by(generator_index, generator_sample_index) %>%
-  summarise_at(vars(mse_def, mse_quant, score_def, score_quant, n), list(mean = mean, sd = sd))
+  summarise_at(vars(mse_def, mse_def_curve, mse_quant, mse_quant_curve, score_def, score_quant, n), list(mean = mean, sd = sd))
 
 alpha = 0.05
 
 df_means <- df_means %>% 
   mutate(mse_def_sde = mse_def_sd / sqrt(n_mean)) %>%
   mutate(mse_quant_sde = mse_quant_sd / sqrt(n_mean)) %>%
+  mutate(mse_def_curve_sde = mse_def_curve_sd / sqrt(n_mean)) %>%
+  mutate(mse_quant_curve_sde = mse_quant_curve_sd / sqrt(n_mean)) %>%
   mutate(score_def_sde = score_def_sd / sqrt(n_mean)) %>%           
   mutate(score_quant_sde = score_quant_sd / sqrt(n_mean)) %>%
   mutate(mse_def_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_def_sde) %>%
   mutate(mse_quant_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_quant_sde) %>%
+  mutate(mse_def_curve_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_def_curve_sde) %>%
+  mutate(mse_quant_curve_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_quant_curve_sde) %>%
   mutate(score_def_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * score_def_sde) %>%
   mutate(score_quant_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * score_quant_sde)
   
@@ -163,6 +165,10 @@ df_means <- df_means %>%
   mutate(mse_def_upper = mse_def_mean + mse_def_conf) %>%
   mutate(mse_quant_lower = mse_quant_mean - mse_quant_conf) %>%
   mutate(mse_quant_upper = mse_quant_mean + mse_quant_conf) %>%
+  mutate(mse_def_curve_lower = mse_def_curve_mean - mse_def_curve_conf) %>%
+  mutate(mse_def_curve_upper = mse_def_curve_mean + mse_def_curve_conf) %>%
+  mutate(mse_quant_curve_lower = mse_quant_curve_mean - mse_quant_curve_conf) %>%
+  mutate(mse_quant_curve_upper = mse_quant_curve_mean + mse_quant_curve_conf) %>%
   mutate(score_def_lower = score_def_mean - score_def_conf) %>%
   mutate(score_def_upper = score_def_mean + score_def_conf) %>%
   mutate(score_quant_lower = score_quant_mean - score_quant_conf) %>%
@@ -196,6 +202,15 @@ hist(df_2$mse_quant)
 
 hist(df_3$mse_def)
 hist(df_3$mse_quant)
+
+hist(df_1$mse_def_curve)
+hist(df_1$mse_quant_curve)
+
+hist(df_2$mse_def_curve)
+hist(df_2$mse_quant_curve)
+
+hist(df_3$mse_def_curve)
+hist(df_3$mse_quant_curve)
 ```
 
 ```{r}
@@ -206,4 +221,8 @@ print(t.test(df_3$score_def, df_3$score_quant))
 print(t.test(df_1$mse_def, df_1$mse_quant))
 print(t.test(df_2$mse_def, df_2$mse_quant))
 print(t.test(df_3$mse_def, df_3$mse_quant))
+
+print(t.test(df_1$mse_def_curve, df_1$mse_quant_curve))
+print(t.test(df_2$mse_def_curve, df_2$mse_quant_curve))
+print(t.test(df_3$mse_def_curve, df_3$mse_quant_curve))
 ```
