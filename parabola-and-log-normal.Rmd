@@ -1,0 +1,59 @@
+```{r}
+library(ggplot2)
+library(cladina)
+
+f_noise <- function(ys) {
+  return((rnorm(length(ys)) / 10) * ys)
+}
+
+f_x_dist  <- function(n) {
+  return(rlnorm(n, mean = 0, sd = 0.5))
+}
+
+f_signal_parabola <- function(x) {
+  return(-x^2 + x*4)
+}
+
+n <- 250
+d <- generate_data(n, 2, 2, f_x_dist, f_signal_parabola, f_noise)
+```
+
+```{r}
+ggplot(d, aes(Independent, Dependent)) + geom_point()
+```
+
+```{r}
+target_nknots <- 5
+res <- choose_model(d, Dependent, Independent, max_nsknots = target_nknots)
+
+plot_model(d, Dependent, Independent, res$ns$model)
+plot_model(d, SignalMeasured, Independent, res$ns$model)
+plot_rstandard(d, res$ns$model)
+
+plot_model(d, Dependent, Independent, res$mfp$model)
+plot_model(d, SignalMeasured, Independent, res$mfp$model)
+plot_rstandard(d, res$mfp$model)
+
+plot_model(d, Dependent, Independent, res$ns_nu$model)
+plot_model(d, SignalMeasured, Independent, res$ns_nu$model)
+plot_rstandard(d, res$ns_nu$model)
+```
+
+```{r}
+'
+target_nknots <- 5
+res <- choose_splines_thorough(d, Dependent, Independent, max_nknots = target_nknots)
+
+plot_model(d, Dependent, Independent, res$uniform$model)
+plot_model(d, SignalMeasured, Independent, res$uniform$model)
+plot_rstandard(d, res$uniform$model)
+
+plot_model(d, Dependent, Independent, res$distinct$model)
+plot_model(d, SignalMeasured, Independent, res$distinct$model)
+plot_rstandard(d, res$distinct$model)
+
+plot_model(d, Dependent, Independent, res$quantile$model)
+plot_model(d, SignalMeasured, Independent, res$quantile$model)
+plot_rstandard(d, res$quantile$model)
+'
+```
