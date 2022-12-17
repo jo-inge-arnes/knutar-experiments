@@ -51,7 +51,7 @@ generate_logis <- function(n) {
 ```
 
 ```{r}
-single_sample_experiment <- function(i, n, gen_fn, max_knots, x, y) {
+single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   d <- gen_fn$fn(n)
   
   suggested <- suggest_knotcount(d, Dependent, Independent, max_knots, stats::BIC)
@@ -96,6 +96,10 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots, x, y) {
   mse_default <- sum((mod_default$fitted.values - d$SignalMeasured)^2) / n
   mse_quant <- sum((mod_quant$fitted.values - d$SignalMeasured)^2) / n
   
+  # Create 500 evenly spaced values between lower and upper independent value
+  # For computing a MSE for evenly spaced values along independent axis
+  x <- data.frame(Independent = seq(from = min(d$Independent), to = max(d$Independent), length.out = 500))
+  y <- unlist(lapply(x$Independent, gen_fn$curve_fn))  
   
   # Compute MSE for evenly spaced values along independent variable
   
@@ -116,20 +120,15 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots, x, y) {
   return(res)
 }
 
-multiple_sample_experiments <- function(n, gen_fn, rep_cnt, max_knots, x, y) {
-  res_list <- lapply(1:rep_cnt, single_sample_experiment, gen_fn = gen_fn, n = n, max_knots = max_knots, x = x, y = y)
+multiple_sample_experiments <- function(n, gen_fn, rep_cnt, max_knots) {
+  res_list <- lapply(1:rep_cnt, single_sample_experiment, gen_fn = gen_fn, n = n, max_knots = max_knots)
   res_df <- as.data.frame(data.table::rbindlist(res_list))
   return(res_df)
 }
 
 generator_sample_experiments <- function(gen_fn, sample_sizes, samples_per_set, max_knots) {
-  # Create 500 evenly spaced values between lower and upper independent value
-  # For computing a MSE for evenly spaced values along independent axis
-  x <- data.frame(Independent = seq(from = min(d$Independent), to = max(d$Independent), length.out = 500))
-  y <- unlist(lapply(x$Independent, gen_fn$curve_fn))  
-  
   # Run experiments with same generator, different n, sets of many samples per n
-  res_df_list <- lapply(sample_sizes, multiple_sample_experiments, gen_fn = gen_fn, rep_cnt = samples_per_set, max_knots = max_knots, x = x, y = y)
+  res_df_list <- lapply(sample_sizes, multiple_sample_experiments, gen_fn = gen_fn, rep_cnt = samples_per_set, max_knots = max_knots)
   
   res_df <- bind_rows(res_df_list, .id = "generator_sample_index")
   
