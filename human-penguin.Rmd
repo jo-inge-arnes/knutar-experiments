@@ -25,7 +25,7 @@ p
 ```
 
 ```{r}
-target_nknots <- 7
+target_nknots <- 4
 res <- choose_model(d, Dependent, Independent, max_nsknots = target_nknots)
 
 plot_model(d, Dependent, Independent, res$ns$model)
@@ -42,7 +42,8 @@ plot_rstandard(d, res$ns_nu$model)
 ```
 
 ```{r}
-target_nknots <- 7
+'
+target_nknots <- 4
 res <- choose_splines_thorough(d, Dependent, Independent, max_nknots = target_nknots)
 
 plot_model(d, Dependent, Independent, res$uniform$model)
@@ -56,4 +57,5 @@ plot_rstandard(d, res$distinct$model)
 plot_model(d, Dependent, Independent, res$quantile$model)
 plot_model(d, SignalMeasured, Independent, res$quantile$model)
 plot_rstandard(d, res$quantile$model)
+'
 ```
