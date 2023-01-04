@@ -2,19 +2,19 @@
 library(ggplot2)
 library(cladina)
 
-f_noise <- function(ys) {
-  return((rnorm(length(ys)) / 10))
+f_noise <- function(xs) {
+  return((rnorm(length(xs)) / 10))
 }
 
 f_x_dist  <- function(n) {
-  return(rlnorm(n, mean = 0, sd = 0.5))
+  return(rlnorm(n, meanlog = 0.3, sdlog = 0.4))
 }
 
 f_signal_logistic <- function(x) {
   return(1 / (1 + exp(-(x - 1.5) / 0.2)))
 }
 
-n <- 250
+n <- 200
 d <- generate_data(n, 2, 2, f_x_dist, f_signal_logistic, f_noise)
 ```
 

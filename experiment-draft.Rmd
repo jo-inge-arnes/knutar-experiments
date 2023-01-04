@@ -6,30 +6,30 @@ library(dplyr)
 
 ```{r}
 
-f_noise_1 <- function(ys) {
-  return((rnorm(length(ys)) / 10) * ys)
+f_noise_1 <- function(xs) {
+  return((rnorm(length(xs)) / 10) * xs)
 }
 
 f_x_dist  <- function(n) {
-  return(rlnorm(n, mean = 0, sd = 0.5))
+  return(rlnorm(n, meanlog = 0.3, sdlog = 0.4))
 }
 
 generate_x_div_x_plus_half <- function(n) {
-  d <- generate_data(n, 2, 2, f_x_dist, f_signal_x_div_half_plus_x, f_noise_1)
+  d <- generate_data(n, 3, 3, f_x_dist, f_signal_x_div_half_plus_x, f_noise_1)
   return(d)
 }
 
 generate_cos <- function(n) {
-  d <- generate_data(n, 2, 2, f_x_lognorm_dist, f_signal_cos, f_noise_rnorm_scaled)
+  d <- generate_data(n, 3, 3, f_x_dist, f_signal_cos, f_noise_1)
   return(d)
 }
 
-f_noise_2 <- function(ys) {
-  return(rnorm(ys) * ys / 10)
+f_noise_2 <- function(xs) {
+  return(rnorm(xs) * xs / 10)
 }
 
 generate_mm <- function(n) {
-  d <- generate_data(n, 1, 3, f_x_lognorm_dist, f_signal_michaelis_menten, f_noise_2)
+  d <- generate_data(n, 3, 3, f_x_dist, f_signal_michaelis_menten, f_noise_1)
   return(d)
 }
 
@@ -38,7 +38,7 @@ f_signal_parabola <- function(x) {
 }
 
 generate_para <- function(n) {
-  d <- generate_data(n, 2, 2, f_x_dist, f_signal_parabola, f_noise_1)
+  d <- generate_data(n, 3, 3, f_x_dist, f_signal_parabola, f_noise_1)
 }
 
 f_signal_logistic <- function(x) {
@@ -46,7 +46,7 @@ f_signal_logistic <- function(x) {
 }
 
 generate_logis <- function(n) {
-  d <- generate_data(n, 2, 2, f_x_dist, f_signal_logistic, f_noise_1)
+  d <- generate_data(n, 3, 3, f_x_dist, f_signal_logistic, f_noise_1)
 }
 
 f_signal_gompertz <- function(x) {
@@ -54,7 +54,7 @@ f_signal_gompertz <- function(x) {
 }
 
 generate_gompertz <- function(n) {
-  d <- generate_data(n, 2, 2, f_x_dist, f_signal_gompertz, f_noise_1)
+  d <- generate_data(n, 3, 3, f_x_dist, f_signal_gompertz, f_noise_1)
 }
 
 f_signal_logarithmic <- function(x) {
@@ -62,15 +62,15 @@ f_signal_logarithmic <- function(x) {
 }
 
 generate_logarithmic <- function(n) {
-  d <- generate_data(n, 2, 2, f_x_dist, f_signal_logarithmic, f_noise_1)
+  d <- generate_data(n, 3, 3, f_x_dist, f_signal_logarithmic, f_noise_1)
 }
 
 f_signal_runge <- function(x) {
-  return(1 / (1 + (x - 4)^2))
+  return(1 / (1 + (x - 2)^2))
 }
 
 generate_runge <- function(n) {
-  d <- generate_data(n, 2, 2, f_x_dist, f_signal_runge, f_noise_1)
+  d <- generate_data(n, 3, 3, f_x_dist, f_signal_runge, f_noise_1)
 }
 
 ```
@@ -163,14 +163,18 @@ generator_sample_experiments <- function(gen_fn, sample_sizes, samples_per_set, 
 
 ```{r}
 max_knots <- 4
-sample_sizes <- c(50, 125, 250)
-samples_per_set <- 100
+sample_sizes <- c(100)
+samples_per_set <- 400
 generators <- list(
-  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x), 
-  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic),
-  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten),
-  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge),
-  list("name" = "trigonometric", "fn" = generate_cos, "curve_fn" = f_signal_cos))
+#  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x), 
+  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
+#  ,
+#  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
+#  ,
+#  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
+#  ,
+#  list("name" = "trigonometric", "fn" = generate_cos, "curve_fn" = f_signal_cos)
+  )
 
 suppressWarnings({
   res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = sample_sizes, samples_per_set = samples_per_set, max_knots = max_knots)
@@ -180,7 +184,7 @@ df_all_results <- bind_rows(res_df_list, .id = "generator_index")
 ```
 
 ```{r}
-saveRDS(df_all_results, file="experiment-results-11.Rda")
+saveRDS(df_all_results, file="experiment-results-12.Rda")
 ```
 
 ```{r}
@@ -224,7 +228,7 @@ df_means <- df_means %>%
 library(ggplot2)
 
 df_1 <- df_all_results[df_all_results$generator_index == 1 & df_all_results$generator_sample_index == 1, ]
-
+'
 df_2 <- df_all_results[df_all_results$generator_index == 2 & df_all_results$generator_sample_index == 1, ]
 
 df_3 <- df_all_results[df_all_results$generator_index == 3 & df_all_results$generator_sample_index == 1, ]
@@ -232,10 +236,12 @@ df_3 <- df_all_results[df_all_results$generator_index == 3 & df_all_results$gene
 df_4 <- df_all_results[df_all_results$generator_index == 4 & df_all_results$generator_sample_index == 1, ]
 
 df_5 <- df_all_results[df_all_results$generator_index == 5 & df_all_results$generator_sample_index == 1, ]
+'
 
 hist(df_1$score_def)
 hist(df_1$score_quant)
 
+'
 hist(df_2$score_def)
 hist(df_2$score_quant)
 
@@ -262,10 +268,12 @@ hist(df_4$mse_quant)
 
 hist(df_5$mse_def)
 hist(df_5$mse_quant)
+'
 
 hist(df_1$mse_def_curve)
 hist(df_1$mse_quant_curve)
 
+'
 hist(df_2$mse_def_curve)
 hist(df_2$mse_quant_curve)
 
@@ -277,24 +285,29 @@ hist(df_4$mse_quant_curve)
 
 hist(df_5$mse_def_curve)
 hist(df_5$mse_quant_curve)
+'
 ```
 
 ```{r}
 print(t.test(df_1$score_def, df_1$score_quant))
+'
 print(t.test(df_2$score_def, df_2$score_quant))
 print(t.test(df_3$score_def, df_3$score_quant))
 print(t.test(df_4$score_def, df_4$score_quant))
 print(t.test(df_5$score_def, df_5$score_quant))
-
+'
 print(t.test(df_1$mse_def, df_1$mse_quant))
+'
 print(t.test(df_2$mse_def, df_2$mse_quant))
 print(t.test(df_3$mse_def, df_3$mse_quant))
 print(t.test(df_4$mse_def, df_4$mse_quant))
 print(t.test(df_5$mse_def, df_5$mse_quant))
-
+'
 print(t.test(df_1$mse_def_curve, df_1$mse_quant_curve))
+'
 print(t.test(df_2$mse_def_curve, df_2$mse_quant_curve))
 print(t.test(df_3$mse_def_curve, df_3$mse_quant_curve))
 print(t.test(df_4$mse_def_curve, df_4$mse_quant_curve))
 print(t.test(df_5$mse_def_curve, df_5$mse_quant_curve))
+'
 ```

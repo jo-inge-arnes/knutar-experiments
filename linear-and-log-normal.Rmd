@@ -2,8 +2,8 @@
 library(ggplot2)
 library(cladina)
 
-f_noise <- function(ys) {
-  return(rnorm(length(ys)))
+f_noise <- function(xs) {
+  return(rnorm(length(xs)))
 }
 
 n <- 200
