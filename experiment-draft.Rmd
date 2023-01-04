@@ -7,7 +7,7 @@ library(dplyr)
 ```{r}
 
 f_noise_1 <- function(xs) {
-  return((rnorm(length(xs)) / 10) * xs)
+  return(rnorm(length(xs), 0, 0.1))
 }
 
 f_x_dist  <- function(n) {
@@ -15,12 +15,12 @@ f_x_dist  <- function(n) {
 }
 
 generate_x_div_x_plus_half <- function(n) {
-  d <- generate_data(n, 3, 3, f_x_dist, f_signal_x_div_half_plus_x, f_noise_1)
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_x_div_half_plus_x, f_noise_1)
   return(d)
 }
 
 generate_cos <- function(n) {
-  d <- generate_data(n, 3, 3, f_x_dist, f_signal_cos, f_noise_1)
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_cos, f_noise_1)
   return(d)
 }
 
@@ -29,7 +29,7 @@ f_noise_2 <- function(xs) {
 }
 
 generate_mm <- function(n) {
-  d <- generate_data(n, 3, 3, f_x_dist, f_signal_michaelis_menten, f_noise_1)
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_michaelis_menten, f_noise_1)
   return(d)
 }
 
@@ -38,7 +38,7 @@ f_signal_parabola <- function(x) {
 }
 
 generate_para <- function(n) {
-  d <- generate_data(n, 3, 3, f_x_dist, f_signal_parabola, f_noise_1)
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_parabola, f_noise_1)
 }
 
 f_signal_logistic <- function(x) {
@@ -46,7 +46,7 @@ f_signal_logistic <- function(x) {
 }
 
 generate_logis <- function(n) {
-  d <- generate_data(n, 3, 3, f_x_dist, f_signal_logistic, f_noise_1)
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_logistic, f_noise_1)
 }
 
 f_signal_gompertz <- function(x) {
@@ -54,7 +54,7 @@ f_signal_gompertz <- function(x) {
 }
 
 generate_gompertz <- function(n) {
-  d <- generate_data(n, 3, 3, f_x_dist, f_signal_gompertz, f_noise_1)
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_gompertz, f_noise_1)
 }
 
 f_signal_logarithmic <- function(x) {
@@ -62,7 +62,7 @@ f_signal_logarithmic <- function(x) {
 }
 
 generate_logarithmic <- function(n) {
-  d <- generate_data(n, 3, 3, f_x_dist, f_signal_logarithmic, f_noise_1)
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_logarithmic, f_noise_1)
 }
 
 f_signal_runge <- function(x) {
@@ -70,7 +70,7 @@ f_signal_runge <- function(x) {
 }
 
 generate_runge <- function(n) {
-  d <- generate_data(n, 3, 3, f_x_dist, f_signal_runge, f_noise_1)
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_runge, f_noise_1)
 }
 
 ```
@@ -142,6 +142,8 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
     "score_def" = score_default, "nknots_def" = nknots_default, "mse_def" = mse_default, "mse_def_curve" = mse_def_curve,
     "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant, "mse_quant_curve" = mse_quant_curve)  
   
+  R.utils::printf(".")
+  
   return(res)
 }
 
@@ -163,11 +165,12 @@ generator_sample_experiments <- function(gen_fn, sample_sizes, samples_per_set, 
 
 ```{r}
 max_knots <- 4
-sample_sizes <- c(100)
-samples_per_set <- 400
+sample_sizes <- c(200)
+samples_per_set <- 200
 generators <- list(
-#  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x), 
-  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
+  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x)
+#  , 
+#  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
 #  ,
 #  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
 #  ,
@@ -184,7 +187,7 @@ df_all_results <- bind_rows(res_df_list, .id = "generator_index")
 ```
 
 ```{r}
-saveRDS(df_all_results, file="experiment-results-12.Rda")
+saveRDS(df_all_results, file="experiment-results-13.Rda")
 ```
 
 ```{r}
