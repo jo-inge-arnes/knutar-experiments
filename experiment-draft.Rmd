@@ -168,9 +168,9 @@ max_knots <- 4
 sample_sizes <- c(200)
 samples_per_set <- 200
 generators <- list(
-  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x)
+#  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x)
 #  , 
-#  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
+  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
 #  ,
 #  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
 #  ,
