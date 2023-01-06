@@ -81,7 +81,8 @@ compute_rse <- function(actual, predicted, num_knots) {
   n <- length(predicted)
   
   sse <- sum((actual - predicted)**2)
-  return(sqrt(sse / (n - num_knots)))
+  #return(sqrt(sse / (n - (num_knots + 2))))
+  return(sqrt(sse / (n - 1)))
 }
 
 single_sample_experiment <- function(i, n, gen_fn, max_knots) {
@@ -140,7 +141,7 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   mse_def_curve <- compute_rse(y, y_hat, nknots_default)
   
   y_hat <- predict(mod_quant, newdata = x)
-  mse_quant_curve <-  compute_rse(y, y_hat, nknots_quant)
+  mse_quant_curve <- compute_rse(y, y_hat, nknots_quant)
 
   
   # Return a result row as a list
@@ -149,7 +150,7 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
     "n" = n,
     "gen_fn" = gen_fn$name,
     "score_def" = score_default, "nknots_def" = nknots_default, "mse_def" = mse_default, "mse_def_curve" = mse_def_curve,
-    "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant, "mse_quant_curve" = mse_quant_curve)  
+    "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant, "mse_quant_curve" = mse_quant_curve, "std_diff" = mse_default - mse_quant, "std_diff_curve" = mse_def_curve - mse_quant_curve)  
   
   R.utils::printf(".")
   
@@ -181,9 +182,9 @@ generators <- list(
 #  , 
 #  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
 #  ,
-#  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
+  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
 #  ,
-  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
+#  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
 #  ,
 #  list("name" = "trigonometric", "fn" = generate_cos, "curve_fn" = f_signal_cos)
   )
@@ -265,10 +266,12 @@ hist(df_4$score_quant)
 
 hist(df_5$score_def)
 hist(df_5$score_quant)
+'
 
 hist(df_1$mse_def)
 hist(df_1$mse_quant)
 
+'
 hist(df_2$mse_def)
 hist(df_2$mse_quant)
 
@@ -298,24 +301,41 @@ hist(df_4$mse_quant_curve)
 hist(df_5$mse_def_curve)
 hist(df_5$mse_quant_curve)
 '
+
 ```
 
 ```{r}
-print(t.test(df_1$score_def, df_1$score_quant))
+hist(df_1$std_diff)
+hist(df_1$std_diff_curve)
+
+print(mean(df_1$std_diff))
+print(mean(df_1$std_diff_curve))
+
+library(boot)
+
+b1 <- boot(df_1$std_diff, function(u,i) mean(u[i]), R = 1000)
+boot.ci(b1, type = c("norm","basic","perc"))
+
+b1 <- boot(df_1$std_diff_curve, function(u,i) mean(u[i]), R = 1000)
+boot.ci(b1, type = c("norm","basic","perc"))
+
+```
+
+```{print(t.test(df_1$score_def, df_1$score_quant))}
 '
 print(t.test(df_2$score_def, df_2$score_quant))
 print(t.test(df_3$score_def, df_3$score_quant))
 print(t.test(df_4$score_def, df_4$score_quant))
 print(t.test(df_5$score_def, df_5$score_quant))
 '
-print(t.test(df_1$mse_def, df_1$mse_quant))
+#print(t.test(log(df_1$mse_def), log(df_1$mse_quant)))
 '
 print(t.test(df_2$mse_def, df_2$mse_quant))
 print(t.test(df_3$mse_def, df_3$mse_quant))
 print(t.test(df_4$mse_def, df_4$mse_quant))
 print(t.test(df_5$mse_def, df_5$mse_quant))
 '
-print(t.test(df_1$mse_def_curve, df_1$mse_quant_curve))
+#print(t.test(log(df_1$mse_def_curve), log(df_1$mse_quant_curve)))
 '
 print(t.test(df_2$mse_def_curve, df_2$mse_quant_curve))
 print(t.test(df_3$mse_def_curve, df_3$mse_quant_curve))
