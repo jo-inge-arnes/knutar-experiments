@@ -76,6 +76,14 @@ generate_runge <- function(n) {
 ```
 
 ```{r}
+
+compute_rse <- function(actual, predicted, num_knots) {
+  n <- length(predicted)
+  
+  sse <- sum((actual - predicted)**2)
+  return(sqrt(sse / (n - num_knots)))
+}
+
 single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   d <- gen_fn$fn(n)
   
@@ -118,8 +126,8 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   nknots_quant <- length(res_quant$knots$knots)
   score_quant <- res_quant$score
   
-  mse_default <- sum((mod_default$fitted.values - d$SignalMeasured)^2) / n
-  mse_quant <- sum((mod_quant$fitted.values - d$SignalMeasured)^2) / n
+  mse_default <- compute_rse(d$SignalMeasured, mod_default$fitted.values, nknots_default)
+  mse_quant <- compute_rse(d$SignalMeasured, mod_quant$fitted.values, nknots_quant)
   
   # Create 500 evenly spaced values between lower and upper independent value
   # For computing a MSE for evenly spaced values along independent axis
@@ -129,10 +137,11 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   # Compute MSE for evenly spaced values along independent variable
   
   y_hat <- predict(mod_default, newdata = x)
-  mse_def_curve <- sum((y_hat - y)^2) / n
+  mse_def_curve <- compute_rse(y, y_hat, nknots_default)
   
   y_hat <- predict(mod_quant, newdata = x)
-  mse_quant_curve <- sum((y_hat - y)^2) / n
+  mse_quant_curve <-  compute_rse(y, y_hat, nknots_quant)
+
   
   # Return a result row as a list
   
@@ -170,11 +179,11 @@ samples_per_set <- 200
 generators <- list(
 #  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x)
 #  , 
-  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
+#  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
 #  ,
 #  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
 #  ,
-#  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
+  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
 #  ,
 #  list("name" = "trigonometric", "fn" = generate_cos, "curve_fn" = f_signal_cos)
   )
