@@ -180,9 +180,9 @@ samples_per_set <- 200
 generators <- list(
 #  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x)
 #  , 
-#  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
+  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
 #  ,
-  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
+#  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
 #  ,
 #  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
 #  ,
@@ -194,6 +194,8 @@ suppressWarnings({
 })
 
 df_all_results <- bind_rows(res_df_list, .id = "generator_index")
+
+print('finished')
 ```
 
 ```{r}
@@ -321,25 +323,12 @@ boot.ci(b1, type = c("norm","basic","perc"))
 
 ```
 
-```{print(t.test(df_1$score_def, df_1$score_quant))}
-'
-print(t.test(df_2$score_def, df_2$score_quant))
-print(t.test(df_3$score_def, df_3$score_quant))
-print(t.test(df_4$score_def, df_4$score_quant))
-print(t.test(df_5$score_def, df_5$score_quant))
-'
-#print(t.test(log(df_1$mse_def), log(df_1$mse_quant)))
-'
-print(t.test(df_2$mse_def, df_2$mse_quant))
-print(t.test(df_3$mse_def, df_3$mse_quant))
-print(t.test(df_4$mse_def, df_4$mse_quant))
-print(t.test(df_5$mse_def, df_5$mse_quant))
-'
-#print(t.test(log(df_1$mse_def_curve), log(df_1$mse_quant_curve)))
-'
-print(t.test(df_2$mse_def_curve, df_2$mse_quant_curve))
-print(t.test(df_3$mse_def_curve, df_3$mse_quant_curve))
-print(t.test(df_4$mse_def_curve, df_4$mse_quant_curve))
-print(t.test(df_5$mse_def_curve, df_5$mse_quant_curve))
-'
+```{r}
+t.test(df_1$score_def, df_1$score_quant, paired = TRUE, alternative = "two.sided")
+```
+
+```{r}
+df_1$bic_diff_cats <- cut(df_1$score_def - df_1$score_quant, c(-Inf, -1, 1, Inf), c("W", "E", "B"), right = FALSE) 
+
+ggplot(df_1, aes(x=bic_diff_cats)) + geom_bar()
 ```
