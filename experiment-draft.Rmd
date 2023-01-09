@@ -121,7 +121,6 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
     "score_unif" = score_unif, "nknots_unif" = nknots_unif, "mse_unif" = mse_unif,
     "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant)
 '
-  
   res_quant <- choose_splines(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::BIC) 
   mod_quant <- res_quant$model
   nknots_quant <- length(res_quant$knots$knots)
@@ -180,9 +179,9 @@ samples_per_set <- 200
 generators <- list(
 #  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x)
 #  , 
-  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
+#  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
 #  ,
-#  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
+  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
 #  ,
 #  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
 #  ,
@@ -199,7 +198,7 @@ print('finished')
 ```
 
 ```{r}
-saveRDS(df_all_results, file="experiment-results-13.Rda")
+#saveRDS(df_all_results, file="experiment-results-13.Rda")
 ```
 
 ```{r}
@@ -331,4 +330,13 @@ t.test(df_1$score_def, df_1$score_quant, paired = TRUE, alternative = "two.sided
 df_1$bic_diff_cats <- cut(df_1$score_def - df_1$score_quant, c(-Inf, -1, 1, Inf), c("W", "E", "B"), right = FALSE) 
 
 ggplot(df_1, aes(x=bic_diff_cats)) + geom_bar()
+```
+
+```{r}
+cor(df_1$score_def - df_1$score_quant, df_1$std_diff)
+cor(df_1$score_def - df_1$score_quant, df_1$std_diff_curve)
+
+ggplot(df_1, aes(score_def - score_quant, std_diff)) + geom_point()
+ggplot(df_1, aes(score_def - score_quant, std_diff_curve)) + geom_point()
+
 ```

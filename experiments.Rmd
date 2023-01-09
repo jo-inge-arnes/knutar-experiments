@@ -9,22 +9,95 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+```{r libraries, include=FALSE}
+library(ggplot2)
+library(cladina)
+```
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Results
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r plotting-functions}
 
-```{r cars}
-summary(cars)
+name_and_bic <- function(name, mod) {
+  return(paste(name, " (BIC ", round(BIC(mod)), ")"))
+}
+
+plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
+  
+  n = 200
+  
+  x <- seq(from = min(d$Independent), to = max(d$Independent), length.out = n)
+  d_x <- data.frame(Independent = x)
+  y <- unlist(lapply(x, f_curve))
+  y0 <- predict(mod0, newdata = d_x)
+  y1 <- predict(mod1, newdata = d_x)
+  
+  true_label <- "True Curve"
+  a0_label <- name_and_bic("A0", mod0)
+  a1_label <- name_and_bic("A1", mod1)
+  
+  d2 <- data.frame("Independent" = x, "Dependent" = y, "Curve" = replicate(n, true_label))
+  d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y0, "Curve" = replicate(n, a0_label)))
+  d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y1, "Curve" = replicate(n, a1_label)))
+
+  d2$Curve <- factor(d2$Curve,
+                      levels = c(true_label, a0_label, a1_label))
+  
+  fig <- ggplot(d2, aes(Independent, Dependent)) 
+  fig <- fig + theme_bw()
+  fig <- fig + scale_linetype_manual(values = c("solid", "twodash", "solid"),
+                     labels = c(true_label, a0_label, a1_label))
+  fig <- fig + scale_color_manual(values = c("gray80", "black", "black"),
+                     labels = c(true_label, a0_label, a1_label))
+  fig <- fig + scale_size_manual(values=c(1.7, 0.5, 0.5),
+                     labels = c(true_label, a0_label, a1_label))  
+  fig <- fig + geom_line(aes(linetype = Curve, color = Curve, size = Curve))
+  fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray70")
+  fig <- fig + guides(shape = FALSE)
+  fig <- fig + theme(legend.justification = c(1, 0), legend.position = c(1, 0))
+  fig <- fig + ggtitle(paste(curve_name, "Curve and Regressions"))
+
+
+  return(fig)
+}
+
+```
+
+## Example data set and models
+
+```{r}
+f_noise_1 <- function(xs) {
+  return(rnorm(length(xs), 0, 0.1))
+}
+
+f_signal <- function(x) {
+  return(1 / (1 + exp(-(x - 1.5) / 0.2)))
+}
+
+generate_example_data <- function(n) {
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal, f_noise_1)
+  return(d)
+}
+```
+
+```{r}
+set.seed(8)
+d <- generate_example_data(200)
+
+max_knots <- 4
+suggested_cnt <- cladina::suggest_knotcount(d, Dependent, Independent, max_knots, stats::BIC)
+m0 <- model_by_count(d, Dependent, Independent, suggested_cnt$nknots)
+m1 <- choose_splines(d, Dependent, Independent,  max_nknots = max_knots, icr_fn = stats::BIC)$model
+
 ```
 
 ## Including Plots
 
-You can also embed plots, for example:
+```{r plot-curves, echo=FALSE}
+curve_name <- "Logistic"
+fig <- plot_curves_and_observations(d, f_signal, m0, m1, curve_name)
+plot(fig)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
