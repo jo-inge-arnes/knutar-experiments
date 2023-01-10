@@ -83,7 +83,8 @@ compute_rse <- function(actual, predicted, num_knots) {
   sse <- sum((actual - predicted)**2)
   #return(sqrt(sse / (n - (num_knots + 2))))
   #return(sqrt(sse / (n - 1)))
-  return(sse / (n - 1))
+  #return(sse / (n - 1))
+  return(sse / n)
 }
 
 single_sample_experiment <- function(i, n, gen_fn, max_knots) {
@@ -324,36 +325,56 @@ boot.ci(b1, type = c("norm","basic","perc"))
 ```
 
 ```{r}
-t.test(df_1$score_def, df_1$score_quant, paired = TRUE, alternative = "two.sided")
+
+if (shapiro.test(df_1$score_def)$p.value >= 0.05 && shapiro.test(df_1$score_quant)$p.value >= 0.05) {
+  t_res <- t.test(df_1$score_def, df_1$score_quant, paired = TRUE, alternative = "two.sided")
+  mean_ci <- list(test.type = "T-test", conf.int = t_res$conf.int, p.value = t_res$p.value)
+} else {
+  b1 <- boot(df_1$score_def - df_1$score_quant, function(u,i) mean(u[i]), R = 1000)
+  b_res <- boot.ci(b1, type = c("norm"))
+  mean_ci <- list(test.type = "Bootstrap", conf.int = c(b_res$normal[2], b_res$normal[3]), R.value = b_res$R)
+}
+
+
 ```
 
 ```{r}
+library(scales)
 df_1$bic_diff_cats <- cut(df_1$score_def - df_1$score_quant, c(-Inf, -0.5, 0.5, Inf), c("Worse (W)", "Equally good (E)", "Better (B)"), right = FALSE) 
+
+if (mean_ci$test.type == "T-test") {
+  p_str <- paste("~'], p = '~", mean_ci$p.value)
+} else {
+  p_str <- paste("~'], R = '~", mean_ci$R.value)
+}
+
+subtitle <- paste("'", mean_ci$test.type, ":'~mu~'95% CI['~", mean_ci$conf.int[1], "~', '~", mean_ci$conf.int[2], p_str)
 
 ggplot(df_1, aes(x=bic_diff_cats)) + 
   theme_bw() +
   geom_bar() +
-  ggtitle(parse_format()("'Pairwise Results Categorized by'~BIC[A[0]] - BIC[A[1]]")) +
-  xlab(parse_format()("'Scores are categorized as equally good if '~BIC[A[0]] - BIC[A[1]] <= abs(0.5)")) + 
+  ggtitle(parse_format()("'Pairwise Results Categorized by'~BIC[A[0]] - BIC[A[1]]"), parse_format()(subtitle)) +
+  xlab(parse_format()("'Differences' <= abs(0.5)~'are considered equally good.'")) + 
   ylab("Count")
 ```
 
-\<- fig + theme_bw()
-
-plot(fig)
-
-```{r}
-cor(df_1$score_def - df_1$score_quant, df_1$std_diff)
-cor(df_1$score_def - df_1$score_quant, df_1$std_diff_curve)
-
+```{r, echo = FALSE}
+pearson_r <- cor(df_1$score_def - df_1$score_quant, df_1$std_diff)
 ggplot(df_1, aes(x = score_def - score_quant, y = std_diff)) + 
   theme_bw() +
-  geom_point(shape = 1, color = "gray50") +
-  stat_smooth(method = "lm")
+  geom_point(shape = 1, color = "gray40") +
+  stat_smooth(method = "lm", color = "black", size = 0.5) +
+  ggtitle(paste("Relationship Between BIC and MSE Differences (r = ", round(pearson_r, 2), ")")) +
+  ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
+  xlab(parse_format()("BIC[A[0]] - BIC[A[1]]"))
+  
 
+pearson_r <- cor(df_1$score_def - df_1$score_quant, df_1$std_diff_curve)
 ggplot(df_1, aes(x = score_def - score_quant, y = std_diff_curve)) + 
   theme_bw() +
-  geom_point(shape = 1, color = "gray50") +
-  stat_smooth(method = "lm")
-
+  geom_point(shape = 1, color = "gray40") +
+  stat_smooth(method = "lm", color = "black", size = 0.5) +
+  ggtitle(paste("Relationship Between BIC and MSE Differences (r = ", round(pearson_r, 2), ")")) +
+  ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
+  xlab(parse_format()("BIC[A[0]] - BIC[A[1]]"))
 ```
