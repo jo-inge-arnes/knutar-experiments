@@ -9,17 +9,18 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r libraries, include=FALSE}
+```{r libraries, include = FALSE}
 library(ggplot2)
+library(scales)
 library(cladina)
 ```
 
 ## Results
 
-```{r plotting-functions}
+```{r single-sample-figures, include = FALSE}
 
 name_and_bic <- function(name, mod) {
-  return(paste(name, " (BIC ", round(BIC(mod)), ")"))
+  return(paste(name, "~'(BIC: ", round(BIC(mod)), ")'", sep = ""))
 }
 
 plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
@@ -32,9 +33,9 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   y0 <- predict(mod0, newdata = d_x)
   y1 <- predict(mod1, newdata = d_x)
   
-  true_label <- "True Curve"
-  a0_label <- name_and_bic("A0", mod0)
-  a1_label <- name_and_bic("A1", mod1)
+  true_label <- "'True Curve'"
+  a0_label <- name_and_bic("A[0]", mod0)
+  a1_label <- name_and_bic("A[1]", mod1)
   
   d2 <- data.frame("Independent" = x, "Dependent" = y, "Curve" = replicate(n, true_label))
   d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y0, "Curve" = replicate(n, a0_label)))
@@ -46,11 +47,11 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   fig <- ggplot(d2, aes(Independent, Dependent)) 
   fig <- fig + theme_bw()
   fig <- fig + scale_linetype_manual(values = c("solid", "twodash", "solid"),
-                     labels = c(true_label, a0_label, a1_label))
-  fig <- fig + scale_color_manual(values = c("gray80", "black", "black"),
-                     labels = c(true_label, a0_label, a1_label))
+                     labels = parse_format()(c(true_label, a0_label, a1_label)))
+  fig <- fig + scale_color_manual(values = c("gray75", "black", "black"),
+                     labels = parse_format()(c(true_label, a0_label, a1_label)))
   fig <- fig + scale_size_manual(values=c(1.7, 0.5, 0.5),
-                     labels = c(true_label, a0_label, a1_label))  
+                     labels = parse_format()(c(true_label, a0_label, a1_label)))
   fig <- fig + geom_line(aes(linetype = Curve, color = Curve, size = Curve))
   fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray70")
   fig <- fig + guides(shape = FALSE)
@@ -63,9 +64,26 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
 
 ```
 
+```{r bic-results-barchart, include = FALSE}
+
+plot_bic_barchart <- function(d) {
+  d$bic_diff_cats <- cut(d$scores_a0 - df_1$scores_a1, c(-Inf, -0.5, 0.5, Inf), c("W", "E", "B"), right = FALSE)
+  
+  fig <- ggplot(d, aes(x = bic_diff_cats)) + 
+    theme_bw() +
+    geom_bar() +
+    ggtitle(parse_format()("'Pairwise Results Categorized by'~BIC[A[0]] - BIC[A[1]]")) +
+    xlab(parse_format()("'Scores are categorized as equally good if '~BIC[A[0]] - BIC[A[1]] <= abs(0.5)")) + 
+    ylab("Count")
+  
+  return(fig)
+}
+
+```
+
 ## Example data set and models
 
-```{r}
+```{r, include = FALSE}
 f_noise_1 <- function(xs) {
   return(rnorm(length(xs), 0, 0.1))
 }
@@ -93,11 +111,9 @@ m1 <- choose_splines(d, Dependent, Independent,  max_nknots = max_knots, icr_fn 
 
 ## Including Plots
 
-```{r plot-curves, echo=FALSE}
+```{r plot-curves, echo = FALSE}
 curve_name <- "Logistic"
 fig <- plot_curves_and_observations(d, f_signal, m0, m1, curve_name)
 plot(fig)
 
 ```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

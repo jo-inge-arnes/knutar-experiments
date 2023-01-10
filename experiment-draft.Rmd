@@ -82,7 +82,8 @@ compute_rse <- function(actual, predicted, num_knots) {
   
   sse <- sum((actual - predicted)**2)
   #return(sqrt(sse / (n - (num_knots + 2))))
-  return(sqrt(sse / (n - 1)))
+  #return(sqrt(sse / (n - 1)))
+  return(sse / (n - 1))
 }
 
 single_sample_experiment <- function(i, n, gen_fn, max_knots) {
@@ -181,9 +182,9 @@ generators <- list(
 #  , 
 #  list("name" = "logistic", "fn" = generate_logis, "curve_fn" = f_signal_logistic)
 #  ,
-  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
+#  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
 #  ,
-#  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
+  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
 #  ,
 #  list("name" = "trigonometric", "fn" = generate_cos, "curve_fn" = f_signal_cos)
   )
@@ -327,16 +328,32 @@ t.test(df_1$score_def, df_1$score_quant, paired = TRUE, alternative = "two.sided
 ```
 
 ```{r}
-df_1$bic_diff_cats <- cut(df_1$score_def - df_1$score_quant, c(-Inf, -1, 1, Inf), c("W", "E", "B"), right = FALSE) 
+df_1$bic_diff_cats <- cut(df_1$score_def - df_1$score_quant, c(-Inf, -0.5, 0.5, Inf), c("Worse (W)", "Equally good (E)", "Better (B)"), right = FALSE) 
 
-ggplot(df_1, aes(x=bic_diff_cats)) + geom_bar()
+ggplot(df_1, aes(x=bic_diff_cats)) + 
+  theme_bw() +
+  geom_bar() +
+  ggtitle(parse_format()("'Pairwise Results Categorized by'~BIC[A[0]] - BIC[A[1]]")) +
+  xlab(parse_format()("'Scores are categorized as equally good if '~BIC[A[0]] - BIC[A[1]] <= abs(0.5)")) + 
+  ylab("Count")
 ```
+
+\<- fig + theme_bw()
+
+plot(fig)
 
 ```{r}
 cor(df_1$score_def - df_1$score_quant, df_1$std_diff)
 cor(df_1$score_def - df_1$score_quant, df_1$std_diff_curve)
 
-ggplot(df_1, aes(score_def - score_quant, std_diff)) + geom_point()
-ggplot(df_1, aes(score_def - score_quant, std_diff_curve)) + geom_point()
+ggplot(df_1, aes(x = score_def - score_quant, y = std_diff)) + 
+  theme_bw() +
+  geom_point(shape = 1, color = "gray50") +
+  stat_smooth(method = "lm")
+
+ggplot(df_1, aes(x = score_def - score_quant, y = std_diff_curve)) + 
+  theme_bw() +
+  geom_point(shape = 1, color = "gray50") +
+  stat_smooth(method = "lm")
 
 ```
