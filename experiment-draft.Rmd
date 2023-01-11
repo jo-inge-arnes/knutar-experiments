@@ -77,81 +77,51 @@ generate_runge <- function(n) {
 
 ```{r}
 
-compute_rse <- function(actual, predicted, num_knots) {
+compute_mse <- function(actual, predicted, num_knots) {
   n <- length(predicted)
-  
   sse <- sum((actual - predicted)**2)
-  #return(sqrt(sse / (n - (num_knots + 2))))
-  #return(sqrt(sse / (n - 1)))
-  #return(sse / (n - 1))
   return(sse / n)
 }
 
 single_sample_experiment <- function(i, n, gen_fn, max_knots) {
+  # Generate data
   d <- gen_fn$fn(n)
-  
-  suggested <- suggest_knotcount(d, Dependent, Independent, max_knots, stats::BIC)
-  nknots_default <-suggested$nknots
-  score_default <- suggested$score
-  mod_default <- model_by_count(d, Dependent, Independent, nknots_default)
-  
-'  
-  alt_mods <- choose_splines_thorough(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::AIC, verbose = FALSE) 
-  
-  mod_dist <- alt_mods$distinct$model
-  mod_unif <- alt_mods$uniform$model
-  mod_quant <- alt_mods$quantile$model
-  
-  score_dist <- alt_mods$distinct$score
-  score_unif <- alt_mods$uniform$score
-  score_quant <- alt_mods$quantile$score
-  
-  nknots_dist <- alt_mods$distinct$nknots
-  nknots_unif <- alt_mods$uniform$nknots
-  nknots_quant <- alt_mods$quantile$nknots
-  
-  mse_default <- sum((mod_default$fitted.values - d$SignalRaw)^2) / n
-  mse_dist <- sum((mod_dist$fitted.values - d$SignalRaw)^2) / n
-  mse_unif <- sum((mod_unif$fitted.values - d$SignalRaw)^2) / n
-  mse_quant <- sum((mod_quant$fitted.values - d$SignalRaw)^2) / n
 
-  res <- list(
-    "n" = n,
-    "gen_fn" = gen_fn$name,
-    "score_def" = score_default, "nknots_def" = nknots_default, "mse_def" = mse_default,
-    "score_dist" = score_dist, "nknots_dist" = nknots_dist, "mse_dist" = mse_dist,
-    "score_unif" = score_unif, "nknots_unif" = nknots_unif, "mse_unif" = mse_unif,
-    "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant)
-'
-  res_quant <- choose_splines(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::BIC) 
-  mod_quant <- res_quant$model
-  nknots_quant <- length(res_quant$knots$knots)
-  score_quant <- res_quant$score
-  
-  mse_default <- compute_rse(d$SignalMeasured, mod_default$fitted.values, nknots_default)
-  mse_quant <- compute_rse(d$SignalMeasured, mod_quant$fitted.values, nknots_quant)
-  
-  # Create 500 evenly spaced values between lower and upper independent value
-  # For computing a MSE for evenly spaced values along independent axis
+  # Create x and y for later computing MSEs for evenly spaced values along independent axis
+  # First, create 500 evenly spaced values between lower and upper independent value
   x <- data.frame(Independent = seq(from = min(d$Independent), to = max(d$Independent), length.out = 500))
+  # Next, compute the true (population mean) curve values for the values in x
   y <- unlist(lapply(x$Independent, gen_fn$curve_fn))  
-  
-  # Compute MSE for evenly spaced values along independent variable
-  
-  y_hat <- predict(mod_default, newdata = x)
-  mse_def_curve <- compute_rse(y, y_hat, nknots_default)
-  
-  y_hat <- predict(mod_quant, newdata = x)
-  mse_quant_curve <- compute_rse(y, y_hat, nknots_quant)
+    
+  # Get the best model given that knots are placed at quantiles within a maximum number knots
+  suggested <- suggest_knotcount(d, Dependent, Independent, max_knots, stats::BIC)
+  nknots_a0 <-suggested$nknots
+  mod_a0 <- model_by_count(d, Dependent, Independent, nknots_a0)
+  bic_a0 <- stats::BIC(mod_a0)
+  mse_a0 <- compute_mse(d$SignalMeasured, mod_a0$fitted.values)
+  # Predict by using mod_a0 and evenly spaced values along independent variable
+  # and compute MSE
+  y_hat_a0 <- predict(mod_a0, newdata = x)
+  mse_a0_uniform_x <- compute_mse(y, y_hat_a0)
 
+  # Get the best model given our approach within a maximum number knots
+  res_a1 <- choose_splines(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::BIC) 
+  nknots_a1 <- length(res_a1$knots$knots)
+  mod_a1 <- res_a1$model
+  bic_a1 <- res_a1$score
+  mse_a1 <- compute_mse(d$SignalMeasured, mod_a1$fitted.values)
+  # Predict by using mod_a1 and evenly spaced values along independent variable
+  # and compute MSE
+  y_hat_a1 <- predict(mod_a1, newdata = x)
+  mse_a1_uniform_x <- compute_mse(y, y_hat_a1)
   
-  # Return a result row as a list
-  
+  # Return a result row
   res <- list(
     "n" = n,
     "gen_fn" = gen_fn$name,
-    "score_def" = score_default, "nknots_def" = nknots_default, "mse_def" = mse_default, "mse_def_curve" = mse_def_curve,
-    "score_quant" = score_quant, "nknots_quant" = nknots_quant, "mse_quant" = mse_quant, "mse_quant_curve" = mse_quant_curve, "std_diff" = mse_default - mse_quant, "std_diff_curve" = mse_def_curve - mse_quant_curve)  
+    "bic_a0" = bic_a0, "nknots_a0" = nknots_a0, "mse_a0" = mse_a0, "mse_a0_uniform_x" = mse_a0_uniform_x,
+    "bic_a1" = bic_a1, "nknots_a1" = nknots_a1, "mse_a1" = mse_a1, "mse_a1_uniform_x" = mse_a1_uniform_x, 
+    "bic_diff" = bic_a0 - bic_a1, "mse_diff" = mse_a0 - mse_a1, "mse_diff_uniform_x" = mse_a0_uniform_x - mse_a1_uniform_x, "nknots_diff" = nknots_a0 - nknots_a1)  
   
   R.utils::printf(".")
   
@@ -178,6 +148,8 @@ generator_sample_experiments <- function(gen_fn, sample_sizes, samples_per_set, 
 max_knots <- 4
 sample_sizes <- c(200)
 samples_per_set <- 200
+
+# List of functions for for generating samples for different curves
 generators <- list(
 #  list("name"= "yield-loss", "fn" = generate_x_div_x_plus_half, "curve_fn" = f_signal_x_div_half_plus_x)
 #  , 
@@ -190,191 +162,144 @@ generators <- list(
 #  list("name" = "trigonometric", "fn" = generate_cos, "curve_fn" = f_signal_cos)
   )
 
-suppressWarnings({
-  res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = sample_sizes, samples_per_set = samples_per_set, max_knots = max_knots)
-})
+
+res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = sample_sizes, samples_per_set = samples_per_set, max_knots = max_knots)
 
 df_all_results <- bind_rows(res_df_list, .id = "generator_index")
 
 print('finished')
 ```
 
-```{r}
-#saveRDS(df_all_results, file="experiment-results-13.Rda")
-```
+```{r, save-result-files}
+experiment_finished_time <- Sys.time()
 
-```{r}
-df_means <- df_all_results %>%
+# Save results
+file_name <- paste("experiment-results-", experiment_finished_time, sep = "")
+saveRDS(df_all_results, file = paste(file_name, ".Rda", sep = ""))
+write.csv(df_all_results, paste(file_name, ".csv", sep = ""), row.names = FALSE)
+
+# Compute sample statistics for the results
+df_sample_stats <- df_all_results %>%
   group_by(generator_index, generator_sample_index) %>%
-  summarise_at(vars(mse_def, mse_def_curve, mse_quant, mse_quant_curve, score_def, score_quant, n), list(mean = mean, sd = sd))
+  summarise_at(vars(bic_diff, bic_a0, bic_a1, mse_diff, mse_a0, mse_a1, mse_diff_uniform_x, mse_a0_uniform_x, mse_a1_uniform_x, nknots_diff, n), list(mean = mean, median = median, mode = DescTools::Mode, sd = sd))
 
-alpha = 0.05
-
-df_means <- df_means %>% 
-  mutate(mse_def_sde = mse_def_sd / sqrt(n_mean)) %>%
-  mutate(mse_quant_sde = mse_quant_sd / sqrt(n_mean)) %>%
-  mutate(mse_def_curve_sde = mse_def_curve_sd / sqrt(n_mean)) %>%
-  mutate(mse_quant_curve_sde = mse_quant_curve_sd / sqrt(n_mean)) %>%
-  mutate(score_def_sde = score_def_sd / sqrt(n_mean)) %>%           
-  mutate(score_quant_sde = score_quant_sd / sqrt(n_mean)) %>%
-  mutate(mse_def_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_def_sde) %>%
-  mutate(mse_quant_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_quant_sde) %>%
-  mutate(mse_def_curve_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_def_curve_sde) %>%
-  mutate(mse_quant_curve_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * mse_quant_curve_sde) %>%
-  mutate(score_def_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * score_def_sde) %>%
-  mutate(score_quant_conf = qt(p = alpha / 2, df = n_mean - 1, lower.tail = FALSE) * score_quant_sde)
-  
-df_means <- df_means %>% 
-  mutate(mse_def_lower = mse_def_mean - mse_def_conf) %>%
-  mutate(mse_def_upper = mse_def_mean + mse_def_conf) %>%
-  mutate(mse_quant_lower = mse_quant_mean - mse_quant_conf) %>%
-  mutate(mse_quant_upper = mse_quant_mean + mse_quant_conf) %>%
-  mutate(mse_def_curve_lower = mse_def_curve_mean - mse_def_curve_conf) %>%
-  mutate(mse_def_curve_upper = mse_def_curve_mean + mse_def_curve_conf) %>%
-  mutate(mse_quant_curve_lower = mse_quant_curve_mean - mse_quant_curve_conf) %>%
-  mutate(mse_quant_curve_upper = mse_quant_curve_mean + mse_quant_curve_conf) %>%
-  mutate(score_def_lower = score_def_mean - score_def_conf) %>%
-  mutate(score_def_upper = score_def_mean + score_def_conf) %>%
-  mutate(score_quant_lower = score_quant_mean - score_quant_conf) %>%
-  mutate(score_quant_upper = score_quant_mean + score_quant_conf)
-
+# Save the result sample statistics
+file_name <- paste("experiment-results-sample-stats", experiment_finished_time, sep = "")
+saveRDS(df_sample_stats, file = paste(file_name, ".Rda", sep = ""))
+write.csv(df_sample_stats, paste(file_name, ".csv", sep = ""), row.names = FALSE)
 ```
+
+Estimation of population mean differences for BIC scores for A0 and A1 models
+
+```{r}
+library(boot)
+
+compute_mean_ci <- function(d) {
+  # Compute 95% CI for the mean difference in BIC for A0 and A1.
+  # If the BIC scores are normally distributed, then do a two-sided paired t-test,
+  # otherwise use bootstrapping.
+  if (shapiro.test(d$bic_a0)$p.value >= 0.05 && shapiro.test(d$bic_a1)$p.value >= 0.05) {
+    t_res <- t.test(d$bic_a0, d$bic_a1, paired = TRUE, alternative = "two.sided")
+    mean_ci <- list(test.type = "T-test", conf.int = t_res$conf.int, p.value = t_res$p.value)
+  } else {
+    b1 <- boot(d$bic_diff, function(u, i) mean(u[i]), R = 1000)
+    b_res <- boot.ci(b1, type = c("norm"))
+    mean_ci <- list(test.type = "Bootstrap", conf.int = c(b_res$normal[2], b_res$normal[3]), R.value = b_res$R)
+  }
+  
+  return(mean_ci)
+}
+```
+
+Bar-chart with pairwise better, equal, worse BICs for A0 and A1 models
 
 ```{r}
 library(ggplot2)
-
-df_1 <- df_all_results[df_all_results$generator_index == 1 & df_all_results$generator_sample_index == 1, ]
-'
-df_2 <- df_all_results[df_all_results$generator_index == 2 & df_all_results$generator_sample_index == 1, ]
-
-df_3 <- df_all_results[df_all_results$generator_index == 3 & df_all_results$generator_sample_index == 1, ]
-
-df_4 <- df_all_results[df_all_results$generator_index == 4 & df_all_results$generator_sample_index == 1, ]
-
-df_5 <- df_all_results[df_all_results$generator_index == 5 & df_all_results$generator_sample_index == 1, ]
-'
-
-hist(df_1$score_def)
-hist(df_1$score_quant)
-
-'
-hist(df_2$score_def)
-hist(df_2$score_quant)
-
-hist(df_3$score_def)
-hist(df_3$score_quant)
-
-hist(df_4$score_def)
-hist(df_4$score_quant)
-
-hist(df_5$score_def)
-hist(df_5$score_quant)
-'
-
-hist(df_1$mse_def)
-hist(df_1$mse_quant)
-
-'
-hist(df_2$mse_def)
-hist(df_2$mse_quant)
-
-hist(df_3$mse_def)
-hist(df_3$mse_quant)
-
-hist(df_4$mse_def)
-hist(df_4$mse_quant)
-
-hist(df_5$mse_def)
-hist(df_5$mse_quant)
-'
-
-hist(df_1$mse_def_curve)
-hist(df_1$mse_quant_curve)
-
-'
-hist(df_2$mse_def_curve)
-hist(df_2$mse_quant_curve)
-
-hist(df_3$mse_def_curve)
-hist(df_3$mse_quant_curve)
-
-hist(df_4$mse_def_curve)
-hist(df_4$mse_quant_curve)
-
-hist(df_5$mse_def_curve)
-hist(df_5$mse_quant_curve)
-'
-
-```
-
-```{r}
-hist(df_1$std_diff)
-hist(df_1$std_diff_curve)
-
-print(mean(df_1$std_diff))
-print(mean(df_1$std_diff_curve))
-
-library(boot)
-
-b1 <- boot(df_1$std_diff, function(u,i) mean(u[i]), R = 1000)
-boot.ci(b1, type = c("norm","basic","perc"))
-
-b1 <- boot(df_1$std_diff_curve, function(u,i) mean(u[i]), R = 1000)
-boot.ci(b1, type = c("norm","basic","perc"))
-
-```
-
-```{r}
-
-if (shapiro.test(df_1$score_def)$p.value >= 0.05 && shapiro.test(df_1$score_quant)$p.value >= 0.05) {
-  t_res <- t.test(df_1$score_def, df_1$score_quant, paired = TRUE, alternative = "two.sided")
-  mean_ci <- list(test.type = "T-test", conf.int = t_res$conf.int, p.value = t_res$p.value)
-} else {
-  b1 <- boot(df_1$score_def - df_1$score_quant, function(u,i) mean(u[i]), R = 1000)
-  b_res <- boot.ci(b1, type = c("norm"))
-  mean_ci <- list(test.type = "Bootstrap", conf.int = c(b_res$normal[2], b_res$normal[3]), R.value = b_res$R)
-}
-
-
-```
-
-```{r}
 library(scales)
-df_1$bic_diff_cats <- cut(df_1$score_def - df_1$score_quant, c(-Inf, -0.5, 0.5, Inf), c("Worse (W)", "Equally good (E)", "Better (B)"), right = FALSE) 
 
-if (mean_ci$test.type == "T-test") {
-  p_str <- paste("~'], p = '~", mean_ci$p.value)
-} else {
-  p_str <- paste("~'], R = '~", mean_ci$R.value)
+plot_bic_difference_categories <- function(d, mean_ci) {
+  d$bic_diff_cats <- cut(d$bic_diff, c(-Inf, -0.5, 0.5, Inf), c("Worse (W)", "Equally good (E)", "Better (B)"), right = FALSE) 
+  
+  if (mean_ci$test.type == "T-test") {
+    p_str <- paste("~'], p = '~", mean_ci$p.value)
+  } else {
+    p_str <- paste("~'], R = '~", mean_ci$R.value)
+  }
+  
+  subtitle <- paste("'", mean_ci$test.type, ":'~mu~'95% CI['~", mean_ci$conf.int[1], "~', '~", mean_ci$conf.int[2], p_str)
+  
+  fig <- ggplot(d, aes(x = bic_diff_cats)) + 
+    theme_bw() +
+    geom_bar() +
+    ggtitle(parse_format()("'Pairwise Results Categorized by'~BIC[A[0]] - BIC[A[1]]"), parse_format()(subtitle)) +
+    xlab(parse_format()("'Differences' <= abs(0.5)~'are considered equally good.'")) + 
+    ylab("Count")  
+  
+  return(fig)
 }
 
-subtitle <- paste("'", mean_ci$test.type, ":'~mu~'95% CI['~", mean_ci$conf.int[1], "~', '~", mean_ci$conf.int[2], p_str)
-
-ggplot(df_1, aes(x=bic_diff_cats)) + 
-  theme_bw() +
-  geom_bar() +
-  ggtitle(parse_format()("'Pairwise Results Categorized by'~BIC[A[0]] - BIC[A[1]]"), parse_format()(subtitle)) +
-  xlab(parse_format()("'Differences' <= abs(0.5)~'are considered equally good.'")) + 
-  ylab("Count")
 ```
 
-```{r, echo = FALSE}
-pearson_r <- cor(df_1$score_def - df_1$score_quant, df_1$std_diff)
-ggplot(df_1, aes(x = score_def - score_quant, y = std_diff)) + 
-  theme_bw() +
-  geom_point(shape = 1, color = "gray40") +
-  stat_smooth(method = "lm", color = "black", size = 0.5) +
-  ggtitle(paste("Relationship Between BIC and MSE Differences (r = ", round(pearson_r, 2), ")")) +
-  ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
-  xlab(parse_format()("BIC[A[0]] - BIC[A[1]]"))
-  
+Correlations between BICs and MSEs
 
-pearson_r <- cor(df_1$score_def - df_1$score_quant, df_1$std_diff_curve)
-ggplot(df_1, aes(x = score_def - score_quant, y = std_diff_curve)) + 
-  theme_bw() +
-  geom_point(shape = 1, color = "gray40") +
-  stat_smooth(method = "lm", color = "black", size = 0.5) +
-  ggtitle(paste("Relationship Between BIC and MSE Differences (r = ", round(pearson_r, 2), ")")) +
-  ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
-  xlab(parse_format()("BIC[A[0]] - BIC[A[1]]"))
+```{r}
+plot_bic_mse_correlations <- function(d) {
+  # Correlations between the pair-wise differences in BIC and MSE for the samples
+  pearson_r <- cor(d$bic_diff, d$mse_diff)
+  
+  fig_cor_sample <- ggplot(d, aes(x = bic_diff, y = mse_diff)) + 
+    theme_bw() +
+    geom_point(shape = 1, color = "gray40") +
+    stat_smooth(method = "lm", color = "black", size = 0.5) +
+    ggtitle(
+      paste("Relationship Between BIC and MSE Differences (r = ", round(pearson_r, 2), ")")) +
+    ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
+    xlab(parse_format()("BIC[A[0]] - BIC[A[1]]"))
+      
+  # Correlations between the pair-wise differences in BIC and MSE for uniformly distances
+  # independent variable values
+  pearson_r <- cor(d$bic_diff, d$mse_diff_uniform_x)
+
+  fig_cor_uniform_x <- ggplot(d, aes(x = bic_diff, y = mse_diff_uniform_x)) + 
+    theme_bw() +
+    geom_point(shape = 1, color = "gray40") +
+    stat_smooth(method = "lm", color = "black", size = 0.5) +
+    ggtitle(
+      paste("Relationship Between BIC and MSE Differences (r = ", round(pearson_r, 2), ")")) +
+    ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
+    xlab(parse_format()("BIC[A[0]] - BIC[A[1]]"))  
+      
+  return(list(sample = fig_cor_sample, uniform_x = fig_cor_uniform_x))
+}
+```
+
+Process results grouped by generator and sample size
+
+```{r}
+library(purrr)
+
+num_generators <- length(generators)
+num_sample_sizes <- length(sample_sizes)
+
+process_result_group <- function(generator_and_size_index) {
+  generator_index <- generator_and_size_index[[1]]
+  sample_size_index <- generator_and_size_index[[2]]
+  
+  d <- df_all_results[df_all_results$generator_index == generator_index & df_all_results$generator_sample_index == sample_size_index, ]
+  
+  # Compute confidence intervals for the mean pairwise difference in BIC scores for A0 and A1 models
+  mean_ci <- compute_mean_ci(d)
+  
+  # Plot bar-chart with categories better, equal, worse BIC scores for A1 compared to A0
+  fig <- plot_bic_difference_categories(d, mean_ci)
+  plot(fig)
+  
+  figs <- plot_bic_mse_correlations(d)
+  plot(figs$sample)
+  plot(figs$uniform_x)
+}
+
+generator_and_size_indices <- expand.grid(1:num_generators, 1:num_sample_sizes, KEEP.OUT.ATTRS = TRUE) %>% purrr::transpose()
+
+res <- lapply(generator_and_size_indices, process_result_group)
 ```
