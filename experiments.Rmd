@@ -48,14 +48,14 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   fig <- fig + theme_bw()
   fig <- fig + scale_linetype_manual(values = c("solid", "twodash", "solid"),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
-  fig <- fig + scale_color_manual(values = c("gray75", "black", "black"),
+  fig <- fig + scale_color_manual(values = c("gray80", "black", "black"),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
   fig <- fig + scale_size_manual(values=c(1.7, 0.5, 0.5),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
   fig <- fig + geom_line(aes(linetype = Curve, color = Curve, size = Curve))
   fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray50")
-  fig <- fig + guides(shape = FALSE)
-  fig <- fig + theme(legend.justification = c(1, 0), legend.position = c(1, 0))
+  fig <- fig + guides(shape = none)
+  fig <- fig + theme(legend.justification = c(1, 1), legend.position = c(0.95, 0.95))
   fig <- fig + ggtitle(paste(curve_name, "Curve and Regressions"))
 
 
@@ -89,7 +89,8 @@ f_noise_1 <- function(xs) {
 }
 
 f_signal <- function(x) {
-  return(1 / (1 + exp(-(x - 1.5) / 0.2)))
+  return(f_signal_cos(x))
+  # return(1 / (1 + exp(-(x - 1.5) / 0.2)))
 }
 
 generate_example_data <- function(n) {

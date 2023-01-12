@@ -157,9 +157,9 @@ generators <- list(
 #  ,
 #  list("name" = "michaelis-menten", "fn" = generate_mm, "curve_fn" = f_signal_michaelis_menten)
 #  ,
-  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
+#  list("name" = "runge-translated", "fn" = generate_runge, "curve_fn" = f_signal_runge)
 #  ,
-#  list("name" = "trigonometric", "fn" = generate_cos, "curve_fn" = f_signal_cos)
+  list("name" = "trigonometric", "fn" = generate_cos, "curve_fn" = f_signal_cos)
   )
 
 
@@ -175,16 +175,18 @@ experiment_finished_time <- Sys.time()
 
 # Save results
 file_name <- paste("experiment-results-", experiment_finished_time, sep = "")
+file_name <- gsub("[\\s:]", "-", file_name)
 saveRDS(df_all_results, file = paste(file_name, ".Rda", sep = ""))
 write.csv(df_all_results, paste(file_name, ".csv", sep = ""), row.names = FALSE)
 
 # Compute sample statistics for the results
 df_sample_stats <- df_all_results %>%
   group_by(generator_index, generator_sample_index) %>%
-  summarise_at(vars(bic_diff, bic_a0, bic_a1, mse_diff, mse_a0, mse_a1, mse_diff_uniform_x, mse_a0_uniform_x, mse_a1_uniform_x, nknots_diff, n), list(mean = mean, median = median, mode = DescTools::Mode, sd = sd))
+  summarise_at(vars(bic_diff, bic_a0, bic_a1, mse_diff, mse_a0, mse_a1, mse_diff_uniform_x, mse_a0_uniform_x, mse_a1_uniform_x, nknots_diff, n), list(mean = mean, median = median, sd = sd))
 
 # Save the result sample statistics
 file_name <- paste("experiment-results-sample-stats", experiment_finished_time, sep = "")
+file_name <- gsub("[\\s:]", "-", file_name)
 saveRDS(df_sample_stats, file = paste(file_name, ".Rda", sep = ""))
 write.csv(df_sample_stats, paste(file_name, ".csv", sep = ""), row.names = FALSE)
 ```
@@ -250,7 +252,7 @@ plot_bic_mse_correlations <- function(d) {
   fig_cor_sample <- ggplot(d, aes(x = bic_diff, y = mse_diff)) + 
     theme_bw() +
     geom_point(shape = 1, color = "gray40") +
-    stat_smooth(method = "lm", color = "black", size = 0.5) +
+    stat_smooth(method = "lm", color = "black", linewidth = 0.5) +
     ggtitle(
       paste("Relationship Between BIC and MSE Differences (r = ", round(pearson_r, 2), ")")) +
     ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
@@ -263,7 +265,7 @@ plot_bic_mse_correlations <- function(d) {
   fig_cor_uniform_x <- ggplot(d, aes(x = bic_diff, y = mse_diff_uniform_x)) + 
     theme_bw() +
     geom_point(shape = 1, color = "gray40") +
-    stat_smooth(method = "lm", color = "black", size = 0.5) +
+    stat_smooth(method = "lm", color = "black", linewidth = 0.5) +
     ggtitle(
       paste("Relationship Between BIC and MSE Differences (r = ", round(pearson_r, 2), ")")) +
     ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
