@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(scales)
 library(cladina)
+library(curry)
 ```
 
 ## Results
@@ -20,11 +21,11 @@ library(cladina)
 ```{r single-sample-figures, include = FALSE}
 
 name_and_bic <- function(name, mod) {
-  return(paste(name, "~'(BIC: ", round(BIC(mod)), ")'", sep = ""))
+  k <- length(extract_knots(mod)$knots)
+  return(paste(name, "~'(Knots: ", k, ", BIC: ", round(BIC(mod)), ")'", sep = ""))
 }
 
 plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
-  
   n = 200
   
   x <- seq(from = min(d$Independent), to = max(d$Independent), length.out = n)
@@ -37,11 +38,11 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   a0_label <- name_and_bic("A[0]", mod0)
   a1_label <- name_and_bic("A[1]", mod1)
   
-  d2 <- data.frame("Independent" = x, "Dependent" = y, "Curve" = replicate(n, true_label))
-  d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y0, "Curve" = replicate(n, a0_label)))
-  d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y1, "Curve" = replicate(n, a1_label)))
+  d2 <- data.frame("Independent" = x, "Dependent" = y, "Curves" = replicate(n, true_label))
+  d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y0, "Curves" = replicate(n, a0_label)))
+  d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y1, "Curves" = replicate(n, a1_label)))
 
-  d2$Curve <- factor(d2$Curve,
+  d2$Curves <- factor(d2$Curves,
                       levels = c(true_label, a0_label, a1_label))
   
   fig <- ggplot(d2, aes(Independent, Dependent)) 
@@ -52,11 +53,14 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
   fig <- fig + scale_size_manual(values=c(1.7, 0.5, 0.5),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
-  fig <- fig + geom_line(aes(linetype = Curve, color = Curve, size = Curve))
+  fig <- fig + geom_line(aes(linetype = Curves, color = Curves, size = Curves))
   fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray50")
-  fig <- fig + guides(shape = none)
-  fig <- fig + theme(legend.justification = c(1, 1), legend.position = c(0.95, 0.95))
-  fig <- fig + ggtitle(paste(curve_name, "Curve and Regressions"))
+  fig <- fig + guides(shape = "none")
+  fig <- fig + theme(legend.position = "bottom",
+                     legend.justification = c("center","bottom"), 
+                     legend.box.just = "center",
+                     legend.margin = margin(6, 6, 6, 6))
+  fig <- fig + ggtitle(paste(curve_name, "True Curve and Regression Curves"))
 
 
   return(fig)
@@ -84,24 +88,50 @@ plot_bic_barchart <- function(d) {
 ## Example data set and models
 
 ```{r, include = FALSE}
-f_noise_1 <- function(xs) {
+f_noise <- function(xs) {
   return(rnorm(length(xs), 0, 0.1))
 }
 
-f_signal <- function(x) {
-  return(f_signal_cos(x))
-  # return(1 / (1 + exp(-(x - 1.5) / 0.2)))
+f_signal <- function(x, curve_name) {
+  y <- switch(curve_name,
+         "Trigonometric" = cos(pi * x),
+         "Logistic" = 1 / (1 + exp(-(x - 1.5) / 0.2)),
+         "Runge" = 1 / (1 + (x - 2)^2),
+         "Michaelis-Menten" = (x * 10) / (x + 2),
+         "Yield-Loss" = x / (0.5 + x))
+  return(y)
 }
 
-generate_example_data <- function(n) {
-  d <- generate_data(n, 2, 2, f_x_dist, f_signal, f_noise_1)
+f_x_dist  <- function(n) {
+  return(rlnorm(n, meanlog = 0.3, sdlog = 0.4))
+}
+
+generate_example_data <- function(n, curve_name) {
+  f_signal_curried <- f_signal %-<% curve_name
+  d <- generate_data(n, 2, 2, f_x_dist, f_signal_curried, f_noise)
   return(d)
 }
 ```
 
 ```{r}
-set.seed(8)
-d <- generate_example_data(200)
+#seed <- 8
+#curve_name <- "Trigonometric"
+
+#seed <- 8
+#curve_name <- "Logistic"
+
+#seed <- 13
+#curve_name <- "Runge"
+
+seed <- 17
+curve_name <- "Michaelis-Menten"
+
+#seed <- 22
+#curve_name <- "Yield-Loss"
+
+set.seed(seed)
+
+d <- generate_example_data(200, curve_name)
 
 max_knots <- 4
 suggested_cnt <- cladina::suggest_knotcount(d, Dependent, Independent, max_knots, stats::BIC)
@@ -113,8 +143,20 @@ m1 <- choose_splines(d, Dependent, Independent,  max_nknots = max_knots, icr_fn 
 ## Including Plots
 
 ```{r plot-curves, echo = FALSE}
-curve_name <- "Logistic"
-fig <- plot_curves_and_observations(d, f_signal, m0, m1, curve_name)
+f_signal_curried <- f_signal %-<% curve_name
+
+fig <- plot_curves_and_observations(d, f_signal_curried, m0, m1, curve_name)
 plot(fig)
 
+```
+
+Save image
+
+```{r}
+now_time <- Sys.time()
+file_name <- paste("fig-", curve_name, "-seed-", seed, "-", now_time, ".png", sep = "")
+file_name <- gsub("[ :]", "-", file_name)
+file_name <- tolower(file_name)
+
+ggsave(file_name, plot = fig, device = "png", dpi = "print")
 ```
