@@ -334,7 +334,7 @@ process_result_group <- function(generator_and_size_index) {
   generator_index <- generator_and_size_index[[1]]
   sample_size_index <- generator_and_size_index[[2]]
   
-  curve_name <- generators[[generator_index]]
+  curve_name <- generators[[generator_index]]$name
   m <- samples_per_set
   n <- sample_sizes[[sample_size_index]]
   
@@ -352,13 +352,13 @@ process_result_group <- function(generator_and_size_index) {
   plot(figs$uniform_x)
 
   # Save plots
-  fig_file_name <- paste(curve_name, "_", m, "_", n, "_%s_seed_", seed, "_", experiment_finished_time, ".png", sep = "")
+  fig_file_name <- paste("figs/", curve_name, "_", m, "_", n, "_%s_s_", seed, "_", experiment_finished_time,".png",sep = "")
   fig_file_name <- gsub("[ :-]", "_", fig_file_name)
-  fig_file_name <- tolower(fig_file_name)
+  fig_file_name <- paste("", tolower(fig_file_name), sep = "")
   
-  ggsave(sprintf(fig_file_name, "bic_diff_cats"), plot = fig, device = "png", dpi = "print")
-  ggsave(sprintf(fig_file_name, "bic_vs_mse1_diffs"), plot = figs$sample, device = "png", dpi = "print")
-  ggsave(sprintf(fig_file_name, "bic_vs_mse2_diffs"), plot = figs$uniform_x, device = "png", dpi = "print")
+  ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "bic"))), plot = fig, device = "png", dpi = "print")
+  ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "mse1"))), plot = figs$sample, device = "png", dpi = "print")
+  ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "mse2"))), plot = figs$uniform_x, device = "png", dpi = "print")
 }
 
 generator_and_size_indices <- expand.grid(1:num_generators, 1:num_sample_sizes, KEEP.OUT.ATTRS = TRUE) %>% purrr::transpose()
