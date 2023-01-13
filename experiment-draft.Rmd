@@ -172,6 +172,9 @@ generator_sample_experiments <- function(gen_fn, sample_sizes, samples_per_set, 
 ```
 
 ```{r}
+seed <- 1
+set.seed(seed)
+
 max_knots <- 4
 sample_sizes <- c(100, 200, 300)
 samples_per_set <- 400
@@ -189,12 +192,12 @@ res_df_list <- lapply(generators, generator_sample_experiments, sample_sizes = s
 
 df_all_results <- bind_rows(res_df_list, .id = "generator_index")
 
+experiment_finished_time <- Sys.time()
+
 print('Completed')
 ```
 
 ```{r, save-result-files}
-experiment_finished_time <- Sys.time()
-
 # Save results
 file_name <- paste("experiment-results-", experiment_finished_time, sep = "")
 file_name <- gsub("[ :]", "-", file_name)
@@ -347,6 +350,14 @@ process_result_group <- function(generator_and_size_index) {
   figs <- plot_bic_mse_correlations(d, curve_name, m, n)
   plot(figs$sample)
   plot(figs$uniform_x)
+
+  # Save plots
+  file_name_pattern <- paste("fig-", curve_name, "-%s-seed-", seed, "-", experiment_finished_time, ".png", sep = "")
+  file_name <- gsub("[ :]", "-", file_name)
+  file_name <- tolower(file_name)
+  ggsave(sprintf(file_name, "bic-diff-cats"), plot = fig, device = "png", dpi = "print")
+  ggsave(sprintf(file_name, "bic-vs-mse1-diffs"), plot = figs$sample, device = "png", dpi = "print")
+  ggsave(sprintf(file_name, "bic-vs-mse2-diffs"), plot = figs$uniform_x, device = "png", dpi = "print")
 }
 
 generator_and_size_indices <- expand.grid(1:num_generators, 1:num_sample_sizes, KEEP.OUT.ATTRS = TRUE) %>% purrr::transpose()
