@@ -352,7 +352,7 @@ process_result_group <- function(generator_and_size_index) {
   plot(figs$uniform_x)
 
   # Save plots
-  file_name_pattern <- paste("fig-", curve_name, "-%s-seed-", seed, "-", experiment_finished_time, ".png", sep = "")
+  file_name_pattern <- paste("fig-", curve_name, "m-", m, "-n-", n, "-%s-seed-", seed, "-", experiment_finished_time, ".png", sep = "")
   file_name <- gsub("[ :]", "-", file_name)
   file_name <- tolower(file_name)
   ggsave(sprintf(file_name, "bic-diff-cats"), plot = fig, device = "png", dpi = "print")
