@@ -176,8 +176,8 @@ seed <- 1
 set.seed(seed)
 
 max_knots <- 4
-sample_sizes <- c(100, 200, 300)
-samples_per_set <- 400
+sample_sizes <- c(250)
+samples_per_set <- 500
 
 # List of functions for for generating samples for different curves
 generators <- list(
@@ -265,7 +265,7 @@ plot_bic_difference_categories <- function(d, mean_ci, curve_name, m, n) {
     theme_bw() +
     geom_bar() +
     ggtitle(parse_format()(title), parse_format()(subtitle)) +
-    xlab(parse_format()("'Differences' <= abs(0.5)~'are considered equally good.'")) + 
+    xlab(parse_format()("'Differences' <= abs(1)~'are considered equally good.'")) + 
     ylab("Count")  
   
   return(fig)
@@ -290,7 +290,7 @@ plot_bic_mse_correlations <- function(d, curve_name, m, n) {
     # Correlations between the pair-wise differences in BIC and MSE for the samples
   pearson_r <- cor(d$bic_diff, d$mse_diff)
   
-  title <- paste("'Relationship Between BIC and'~MSE[1]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
+  title <- paste("'", curve_name, " Curve Relationship Between BIC and'~MSE[1]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
 
   fig_cor_sample <- ggplot(d, aes(x = bic_diff, y = mse_diff)) + 
     theme_bw() +
@@ -306,7 +306,7 @@ plot_bic_mse_correlations <- function(d, curve_name, m, n) {
   # independent variable values
   pearson_r <- cor(d$bic_diff, d$mse_diff_uniform_x)
 
-  title <- paste("'Relationship Between BIC and'~MSE[2]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
+  title <- paste("'", curve_name, " Curve Relationship Between BIC and'~MSE[2]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
 
   fig_cor_uniform_x <- ggplot(d, aes(x = bic_diff, y = mse_diff_uniform_x)) + 
     theme_bw() +
@@ -352,7 +352,7 @@ process_result_group <- function(generator_and_size_index) {
   plot(figs$uniform_x)
 
   # Save plots
-  fig_file_name <- paste("figs/", curve_name, "_", m, "_", n, "_%s_s_", seed, "_", experiment_finished_time,".png",sep = "")
+  fig_file_name <- paste("figs_", experiment_finished_time, "/", curve_name, "_", m, "_", n, "_%s_s_", seed,".png",sep = "")
   fig_file_name <- gsub("[ :-]", "_", fig_file_name)
   fig_file_name <- paste("", tolower(fig_file_name), sep = "")
   
