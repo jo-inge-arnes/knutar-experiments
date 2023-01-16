@@ -27,25 +27,25 @@ name_and_bic <- function(name, mod) {
 
 plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   n = 200
-  
+
   x <- seq(from = min(d$Independent), to = max(d$Independent), length.out = n)
   d_x <- data.frame(Independent = x)
   y <- unlist(lapply(x, f_curve))
   y0 <- predict(mod0, newdata = d_x)
   y1 <- predict(mod1, newdata = d_x)
-  
+
   true_label <- "'True Curve'"
   a0_label <- name_and_bic("A[0]", mod0)
   a1_label <- name_and_bic("A[1]", mod1)
-  
+
   d2 <- data.frame("Independent" = x, "Dependent" = y, "Curves" = replicate(n, true_label))
   d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y0, "Curves" = replicate(n, a0_label)))
   d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y1, "Curves" = replicate(n, a1_label)))
 
   d2$Curves <- factor(d2$Curves,
                       levels = c(true_label, a0_label, a1_label))
-  
-  fig <- ggplot(d2, aes(Independent, Dependent), fig(2075, 1280)) 
+
+  fig <- ggplot(d2, aes(Independent, Dependent), fig(2075, 1280))
   fig <- fig + theme_bw()
   fig <- fig + scale_linetype_manual(values = c("solid", "twodash", "solid"),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
@@ -57,7 +57,7 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray50")
   fig <- fig + guides(shape = "none")
   fig <- fig + theme(legend.position = "top",
-                     legend.justification = c("left","top"), 
+                     legend.justification = c("left","top"),
                      legend.box.just = "left",
                      legend.title = element_blank(),
                      legend.margin = margin(0, 0, 0, 0),
