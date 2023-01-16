@@ -247,7 +247,7 @@ library(scales)
 plot_bic_difference_categories <- function(d, mean_ci, curve_name, m, n) {
   d$bic_diff_cats <- cut(d$bic_diff, c(-Inf, -0.5, 0.5, Inf), c("Worse (W)", "Equally good (E)", "Better (B)"), right = FALSE) 
 
-  title <- paste("'", curve_name,  " Curve Regression Results Categorized by'~BIC[A[0]] - BIC[A[1]]", sep = "")
+  title <- paste("'Results Categorized by'~BIC[A[0]] - BIC[A[1]]", sep = "")
 
   if (mean_ci$test.type == "t-test") {
     p_str <- paste("p = ", signif(mean_ci$p.value, digits = 3), sep = "")
@@ -290,7 +290,7 @@ plot_bic_mse_correlations <- function(d, curve_name, m, n) {
     # Correlations between the pair-wise differences in BIC and MSE for the samples
   pearson_r <- cor(d$bic_diff, d$mse_diff)
   
-  title <- paste("'", curve_name, " Curve Relationship Between BIC and'~MSE[1]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
+  title <- paste("'Relationship Between BIC and'~MSE[1]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
 
   fig_cor_sample <- ggplot(d, aes(x = bic_diff, y = mse_diff)) + 
     theme_bw() +
@@ -306,7 +306,7 @@ plot_bic_mse_correlations <- function(d, curve_name, m, n) {
   # independent variable values
   pearson_r <- cor(d$bic_diff, d$mse_diff_uniform_x)
 
-  title <- paste("'", curve_name, " Curve Relationship Between BIC and'~MSE[2]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
+  title <- paste("'Relationship Between BIC and'~MSE[2]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
 
   fig_cor_uniform_x <- ggplot(d, aes(x = bic_diff, y = mse_diff_uniform_x)) + 
     theme_bw() +

@@ -45,7 +45,7 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   d2$Curves <- factor(d2$Curves,
                       levels = c(true_label, a0_label, a1_label))
   
-  fig <- ggplot(d2, aes(Independent, Dependent)) 
+  fig <- ggplot(d2, aes(Independent, Dependent), fig(2075, 1280)) 
   fig <- fig + theme_bw()
   fig <- fig + scale_linetype_manual(values = c("solid", "twodash", "solid"),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
@@ -56,33 +56,18 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   fig <- fig + geom_line(aes(linetype = Curves, color = Curves, size = Curves))
   fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray50")
   fig <- fig + guides(shape = "none")
-  fig <- fig + theme(legend.position = "bottom",
-                     legend.justification = c("center","bottom"), 
-                     legend.box.just = "center",
-                     legend.margin = margin(6, 6, 6, 6))
-  fig <- fig + ggtitle(paste(curve_name, "True Curve and Regression Curves"))
+  fig <- fig + theme(legend.position = "top",
+                     legend.justification = c("left","top"), 
+                     legend.box.just = "left",
+                     legend.title = element_blank(),
+                     legend.margin = margin(0, 0, 0, 0),
+                     legend.spacing.x = unit(0, "mm"),
+                     legend.spacing.y = unit(0, "mm"))
+  fig <- fig + ggtitle("True Curve and Regression Curves")
 
 
   return(fig)
 }
-
-```
-
-```{r bic-results-barchart, include = FALSE}
-
-plot_bic_barchart <- function(d) {
-  d$bic_diff_cats <- cut(d$scores_a0 - df_1$scores_a1, c(-Inf, -0.5, 0.5, Inf), c("W", "E", "B"), right = FALSE)
-  
-  fig <- ggplot(d, aes(x = bic_diff_cats)) + 
-    theme_bw() +
-    geom_bar() +
-    ggtitle(parse_format()("'Pairwise Results Categorized by'~BIC[A[0]] - BIC[A[1]]")) +
-    xlab(parse_format()("'Scores are categorized as equally good if '~BIC[A[0]] - BIC[A[1]] <= abs(0.5)")) + 
-    ylab("Count")
-  
-  return(fig)
-}
-
 ```
 
 ## Example data set and models
@@ -123,11 +108,11 @@ generate_example_data <- function(n, curve_name) {
 #seed <- 13
 #curve_name <- "Runge"
 
-seed <- 17
-curve_name <- "Michaelis-Menten"
+#seed <- 17
+#curve_name <- "Michaelis-Menten"
 
-#seed <- 22
-#curve_name <- "Yield-Loss"
+seed <- 22
+curve_name <- "Yield-Loss"
 
 set.seed(seed)
 
@@ -154,9 +139,9 @@ Save image
 
 ```{r}
 now_time <- Sys.time()
-file_name <- paste("fig-", curve_name, "-seed-", seed, "-", now_time, ".png", sep = "")
+file_name <- paste("example_figs/", curve_name, "-seed-", seed, "-", now_time, ".png", sep = "")
 file_name <- gsub("[ :]", "-", file_name)
 file_name <- tolower(file_name)
 
-ggsave(file_name, plot = fig, device = "png", dpi = "print")
+ggsave(file_name, plot = fig, device = "png", width = 2075, height = 1280, units = "px", dpi = "print")
 ```
