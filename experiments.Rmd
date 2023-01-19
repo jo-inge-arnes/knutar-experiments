@@ -99,8 +99,8 @@ generate_example_data <- function(n, curve_name) {
 ```
 
 ```{r}
-#seed <- 8
-#curve_name <- "Trigonometric"
+seed <- 8
+curve_name <- "Trigonometric"
 
 #seed <- 8
 #curve_name <- "Logistic"
@@ -111,8 +111,8 @@ generate_example_data <- function(n, curve_name) {
 #seed <- 17
 #curve_name <- "Michaelis-Menten"
 
-seed <- 22
-curve_name <- "Yield-Loss"
+#seed <- 22
+#curve_name <- "Yield-Loss"
 
 set.seed(seed)
 
@@ -122,7 +122,6 @@ max_knots <- 4
 suggested_cnt <- cladina::suggest_knotcount(d, Dependent, Independent, max_knots, stats::BIC)
 m0 <- model_by_count(d, Dependent, Independent, suggested_cnt$nknots)
 m1 <- choose_splines(d, Dependent, Independent,  max_nknots = max_knots, icr_fn = stats::BIC)$model
-
 ```
 
 ## Including Plots
@@ -133,6 +132,14 @@ f_signal_curried <- f_signal %-<% curve_name
 fig <- plot_curves_and_observations(d, f_signal_curried, m0, m1, curve_name)
 plot(fig)
 
+
+# Equidistant knots
+'
+x <- seq(from = min(d$Independent), to = max(d$Independent), length.out = 2)[2:length(x)-2]
+m2 <- model_by_knots(d, Dependent, Independent, x, c(min(d$Independent), max(d$Independent)))
+fig2 <- plot_curves_and_observations(d, f_signal_curried, m0, m2, curve_name)
+plot(fig2)
+'
 ```
 
 Save image
