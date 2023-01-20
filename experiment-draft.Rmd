@@ -242,12 +242,13 @@ Bar-chart with pairwise better, equal, worse BICs for A0 and A1 models
 
 ```{r}
 library(ggplot2)
+library(ggh4x)
 library(scales)
 
 plot_bic_difference_categories <- function(d, mean_ci, curve_name, m, n) {
   d$bic_diff_cats <- cut(d$bic_diff, c(-Inf, -0.5, 0.5, Inf), c("Worse (W)", "Equally good (E)", "Better (B)"), right = FALSE) 
 
-  title <- paste("'Results Categorized by'~BIC[A[0]] - BIC[A[1]]", sep = "")
+  title <- paste("'Results Categorized by'~BIC[A[0]]~-~BIC[A[1]]", sep = "")
 
   if (mean_ci$test.type == "t-test") {
     p_str <- paste("p = ", signif(mean_ci$p.value, digits = 3), sep = "")
@@ -255,20 +256,24 @@ plot_bic_difference_categories <- function(d, mean_ci, curve_name, m, n) {
     p_str <- paste("R = ", signif(mean_ci$R.value, digits = 3), sep = "")
   }
  
-  ci_str <- paste("95% CI[", signif(mean_ci$conf.int[1], digits = 3), ", ", signif(mean_ci$conf.int[2], digits = 3), "]", sep = "")
+  ci_str <- paste(" 95% CI[", signif(mean_ci$conf.int[1], digits = 3), ", ", signif(mean_ci$conf.int[2], digits = 3), "]", sep = "")
   
-  m_n_str <- paste(m, " samples of n = ", n, sep = "")
+  m_n_str <- ""
+  #m_n_str <- paste(m, " samples of n = ", n, ", ", sep = "")
   
-  subtitle <- paste("'", m_n_str, ", ",  mean_ci$test.type, "'~mu~'", ci_str, ", ", p_str, "'", sep = "")
+#  subtitle <- paste("'", m_n_str, mean_ci$test.type, "'~mu~'", ci_str, ", ", p_str, "'", sep = "")
+  subtitle <- paste("'", m_n_str, "'~mu~'", ci_str, ", ", p_str, "'", sep = "")
 
-  fig <- ggplot(d, aes(x = bic_diff_cats)) + 
+  
+  fig_cats <- ggplot(d, aes(x = bic_diff_cats)) + 
+    force_panelsizes(rows = unit(2, "in"), cols = unit(3.5, "in")) +
     theme_bw() +
     geom_bar() +
     ggtitle(parse_format()(title), parse_format()(subtitle)) +
-    xlab(parse_format()("'Differences' <= abs(1)~'are considered equally good.'")) + 
+    xlab(parse_format()("'Differences ' <= abs(1)~' are equally good'")) + 
     ylab("Count")  
   
-  return(fig)
+  return(fig_cats)
 }
 
 ```
@@ -277,9 +282,10 @@ Correlations between BICs and MSEs
 
 ```{r}
 plot_bic_mse_correlations <- function(d, curve_name, m, n) {
-  m_n_str <- paste(m, " samples of n = ", n, sep = "")
+  m_n_str <- ""
+  #m_n_str <- paste(m, " samples of n = ", n, ". ", sep = "")
   subtitle <- paste("'", m_n_str, 
-                    ". Avg. knots: '~A[0]~'(M=", 
+                    "Avg. knots: '~A[0]~'(M=", 
                     signif(mean(d$nknots_a0), digits = 3), 
                     ", SD=", signif(sd(d$nknots_a0), digits = 3),
                     "),'~A[1]~'(M=", 
@@ -290,33 +296,37 @@ plot_bic_mse_correlations <- function(d, curve_name, m, n) {
     # Correlations between the pair-wise differences in BIC and MSE for the samples
   pearson_r <- cor(d$bic_diff, d$mse_diff)
   
-  title <- paste("'Relationship Between BIC and'~MSE[1]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
+  title <- paste("MSE[1]~' Diff. ~ BIC Diff. (r = ", round(pearson_r, 2), ")'", sep = "")
 
-  fig_cor_sample <- ggplot(d, aes(x = bic_diff, y = mse_diff)) + 
+  fig_cor_sample <- ggplot(d, aes(x = bic_diff, y = mse_diff)) +
+    force_panelsizes(rows = unit(2, "in"), cols = unit(3, "in")) +    
     theme_bw() +
     geom_point(shape = 1, color = "gray40") +
     stat_smooth(method = "lm", color = "black", linewidth = 0.5) +
     ggtitle(
-      parse_format()(title),
-      parse_format()(subtitle)) +
+      parse_format()(title)#,
+      #parse_format()(subtitle)
+      ) +
     ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
-    xlab(parse_format()("BIC[A[0]] - BIC[A[1]]"))
+    xlab(parse_format()("BIC[A[0]] -~BIC[A[1]]"))
       
   # Correlations between the pair-wise differences in BIC and MSE for uniformly distances
   # independent variable values
   pearson_r <- cor(d$bic_diff, d$mse_diff_uniform_x)
 
-  title <- paste("'Relationship Between BIC and'~MSE[2]~'Differences (r = ", round(pearson_r, 2), ")'", sep = "")
+  title <- paste("MSE[2]~' Diff. ~ BIC Diff. (r = ", round(pearson_r, 2), ")'", sep = "")
 
   fig_cor_uniform_x <- ggplot(d, aes(x = bic_diff, y = mse_diff_uniform_x)) + 
+    force_panelsizes(rows = unit(2, "in"), cols = unit(3, "in")) +    
     theme_bw() +
     geom_point(shape = 1, color = "gray40") +
     stat_smooth(method = "lm", color = "black", linewidth = 0.5) +
     ggtitle(
-      parse_format()(title),
-      parse_format()(subtitle)) +
+      parse_format()(title)#,
+      #parse_format()(subtitle)
+      ) +
     ylab(parse_format()("MSE[A[0]] - MSE[A[1]]")) + 
-    xlab(parse_format()("BIC[A[0]] - BIC[A[1]]"))  
+    xlab(parse_format()("BIC[A[0]] -~BIC[A[1]]"))  
       
   return(list(sample = fig_cor_sample, uniform_x = fig_cor_uniform_x))
 }
@@ -343,6 +353,7 @@ process_result_group <- function(generator_and_size_index) {
   # Compute confidence intervals for the mean pairwise difference in BIC scores for A0 and A1 models
   mean_ci <- compute_mean_ci(d)
   
+
   # Plot bar-chart with categories better, equal, worse BIC scores for A1 compared to A0
   fig <- plot_bic_difference_categories(d, mean_ci, curve_name, m, n)
   plot(fig)
@@ -356,9 +367,9 @@ process_result_group <- function(generator_and_size_index) {
   fig_file_name <- gsub("[ :-]", "_", fig_file_name)
   fig_file_name <- paste("", tolower(fig_file_name), sep = "")
   
-  ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "bic"))), plot = fig, device = "png", dpi = "print")
-  ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "mse1"))), plot = figs$sample, device = "png", dpi = "print")
-  ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "mse2"))), plot = figs$uniform_x, device = "png", dpi = "print")
+ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "bic"))), plot = fig, device = "png", dpi = "print", height = 3, width = 4)
+  ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "mse1"))), plot = figs$sample, device = "png", dpi = "print", height = 3, width = 4)
+  ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "mse2"))), plot = figs$uniform_x, device = "png", dpi = "print", height = 3, width = 4)
 }
 
 generator_and_size_indices <- expand.grid(1:num_generators, 1:num_sample_sizes, KEEP.OUT.ATTRS = TRUE) %>% purrr::transpose()
