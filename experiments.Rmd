@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r libraries, include = FALSE}
 library(ggplot2)
+library(ggh4x)
 library(scales)
 library(cladina)
 library(curry)
@@ -34,7 +35,7 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   y0 <- predict(mod0, newdata = d_x)
   y1 <- predict(mod1, newdata = d_x)
 
-  true_label <- "'True Curve'"
+  true_label <- "'True'"
   a0_label <- name_and_bic("A[0]", mod0)
   a1_label <- name_and_bic("A[1]", mod1)
 
@@ -45,7 +46,8 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   d2$Curves <- factor(d2$Curves,
                       levels = c(true_label, a0_label, a1_label))
 
-  fig <- ggplot(d2, aes(Independent, Dependent), fig(2075, 1280))
+  fig <- ggplot(d2, aes(Independent, Dependent))
+  fig <- fig + force_panelsizes(rows = unit(2.28, "in"), cols = unit(3.7, "in"))  
   fig <- fig + theme_bw()
   fig <- fig + scale_linetype_manual(values = c("solid", "twodash", "solid"),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
@@ -122,7 +124,6 @@ max_knots <- 4
 suggested_cnt <- cladina::suggest_knotcount(d, Dependent, Independent, max_knots, stats::BIC)
 m0 <- model_by_count(d, Dependent, Independent, suggested_cnt$nknots)
 m1 <- choose_splines(d, Dependent, Independent,  max_nknots = max_knots, icr_fn = stats::BIC)$model
-
 ```
 
 ## Including Plots
@@ -133,15 +134,24 @@ f_signal_curried <- f_signal %-<% curve_name
 fig <- plot_curves_and_observations(d, f_signal_curried, m0, m1, curve_name)
 plot(fig)
 
+
+# Equidistant knots
+'
+x <- seq(from = min(d$Independent), to = max(d$Independent), length.out = 2)[2:length(x)-2]
+m2 <- model_by_knots(d, Dependent, Independent, x, c(min(d$Independent), max(d$Independent)))
+fig2 <- plot_curves_and_observations(d, f_signal_curried, m0, m2, curve_name)
+plot(fig2)
+'
 ```
 
 Save image
 
 ```{r}
 now_time <- Sys.time()
-file_name <- paste("example_figs/", curve_name, "-seed-", seed, "-", now_time, ".png", sep = "")
+#file_name <- paste("example_figs/", curve_name, "-seed-", seed, "-", now_time, ".png", sep = "")
+file_name <- paste("example_figs/", curve_name, "-seed-", seed, ".png", sep = "")
 file_name <- gsub("[ :]", "-", file_name)
 file_name <- tolower(file_name)
 
-ggsave(file_name, plot = fig, device = "png", width = 2075, height = 1280, units = "px", dpi = "print")
+ggsave(file_name, plot = fig, device = "png", units = "in", dpi = "print", height = 3.5, width = 4.5)
 ```
