@@ -132,7 +132,10 @@ single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   mse_a0_uniform_x <- compute_mse(y, y_hat_a0)
 
   # Get the best model given our approach within a maximum number knots
-  res_a1 <- choose_splines(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::BIC) 
+  res_a1 <- choose_splines(d, Dependent, Independent, max_nknots = max_knots, icr_fn = stats::BIC,
+                           cost_fn = stats::BIC) # Trying BIC to avoid using two different measures
+#                           cost_fn = stats::AIC) # Originally AIC was used as default
+
   nknots_a1 <- length(res_a1$knots$knots)
   mod_a1 <- res_a1$model
   bic_a1 <- res_a1$score
@@ -181,9 +184,9 @@ samples_per_set <- 500
 
 # List of functions for for generating samples for different curves
 generators <- list(
-  list("name"= "Yield-Loss", "fn" = generate_yield_loss, "curve_fn" = f_signal_yield_loss), 
-  list("name" = "Logistic", "fn" = generate_logistic, "curve_fn" = f_signal_logistic),
+#  list("name"= "Yield-Loss", "fn" = generate_yield_loss, "curve_fn" = f_signal_yield_loss), 
   list("name" = "Michaelis-Menten", "fn" = generate_michaelis_menten, "curve_fn" = f_signal_michaelis_menten),
+  list("name" = "Logistic", "fn" = generate_logistic, "curve_fn" = f_signal_logistic),
   list("name" = "Runge", "fn" = generate_runge, "curve_fn" = f_signal_runge),
   list("name" = "Trigonometric", "fn" = generate_trigonometric, "curve_fn" = f_signal_trigonometric)
   )
