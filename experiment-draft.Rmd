@@ -113,6 +113,11 @@ compute_mse <- function(actual, predicted, num_knots) {
 single_sample_experiment <- function(i, n, gen_fn, max_knots) {
   # Generate data
   d <- gen_fn$fn(n)
+  
+  # Run experiments with unrounded values
+  d$Independent <- d$IndependentRaw
+  d$Dependent <- d$DependentRaw
+  d$SignalMeasures <- d$SignalRaw
 
   # Create x and y for later computing MSEs for evenly spaced values along independent axis
   # First, create 500 evenly spaced values between lower and upper independent value
