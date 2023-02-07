@@ -177,7 +177,7 @@ set.seed(seed)
 
 max_knots <- 4
 sample_sizes <- c(250)
-samples_per_set <- 100
+samples_per_set <- 1000
 B <- 2000
 
 # List of functions for for generating samples for different curves
@@ -247,9 +247,9 @@ library(ggh4x)
 library(scales)
 
 plot_bic_difference_categories <- function(d, mean_ci, curve_name, m, n) {
-  d$bic_diff_cats <- cut(d$bic_diff, c(-Inf, -0.5, 0.5, Inf), c("Worse (W)", "Equally good (E)", "Better (B)"), right = FALSE) 
+  d$bic_diff_cats <- cut(d$bic_diff, c(-Inf, -0.5, 0.5, Inf), c("Worse", "Equally good", "Better"), right = FALSE) 
 
-  title <- paste("'Results Categorized by'~BIC(a[1])~-~BIC(a[2])", sep = "")
+  title <- paste("'Results Categorized by'~BIC[1b])~-~BIC[2b])", sep = "")
 
   if (mean_ci$test.type == "t-test") {
     p_str <- paste("p = ", signif(mean_ci$p.value, digits = 3), sep = "")

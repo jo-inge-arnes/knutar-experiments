@@ -35,19 +35,22 @@ create_figure <- function(d, mod, title) {
   fig <- fig + geom_point(shape = 1, color = "gray50")
   fig <- fig + geom_line(aes(y = mod$fitted.values), linetype = "solid", color = "black", size = 0.5)
   fig <- fig + ggtitle(title)
+  fig <- fig + xlab(parse_format()("'Predictor'~X[p]")) 
+  fig <- fig + ylab(parse_format()("'Response'~X[r]"))
   return(fig)
 }
 
 
-set.seed(1)
+set.seed(4)
 
 d <- cladina::generate_data(200, 2, 2, f_x_dist, f_signal, f_noise)
 
-res <- cladina::suggest_splines(d, Dependent, Independent, 4, all_knots = TRUE)
+k_max <- 5
+res <- cladina::suggest_splines(d, Dependent, Independent, k_max, all_knots = TRUE)
 
 i_max <- length(res$all_knots)
-fig_lowest_knots <- 19
-knots_indices <- c(1, 10, 15, fig_lowest_knots)
+fig_lowest_knots <- i_max
+knots_indices <- c(1, 5, 8, fig_lowest_knots)
 
 figs <- lapply(knots_indices, function(i) {
   knots <- res$all_knots[[i]]
@@ -60,7 +63,7 @@ figs <- lapply(knots_indices, function(i) {
 
 knot_removal_fig <- ggarrange(figs[[1]], figs[[2]], figs[[3]], figs[[4]], nrow = 2, ncol = 2)
 
-ggsave("example_figs/iteratively-removing-knots.png", plot = knot_removal_fig, device = "png", dpi = "print", height = 8.4, width = 8)
+ggsave("example_figs/iteratively-removing-knots.png", plot = knot_removal_fig, device = "png", dpi = "print", height = 8.4, width = 8.4)
 
 k_lowest <- length(res$all_knots[[fig_lowest_knots]])
 mod_standard <- cladina::model_by_count(d, Dependent, Independent, k_lowest)
@@ -72,7 +75,7 @@ fig_standard = fig_standard + force_panelsizes(rows = unit(3.5, "in"),
                    cols = unit(3.5, "in"))
 
 
-ggsave("example_figs/standard.png", plot = fig_standard, device = "png", height = 4.2, width = 4)
+ggsave("example_figs/standard.png", plot = fig_standard, device = "png", height = 4.2, width = 4.2)
   
 ```
 

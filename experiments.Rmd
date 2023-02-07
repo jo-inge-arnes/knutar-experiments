@@ -36,8 +36,8 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   y1 <- predict(mod1, newdata = d_x)
 
   true_label <- "'True'"
-  a0_label <- name_and_bic("A[0]", mod0)
-  a1_label <- name_and_bic("A[1]", mod1)
+  a0_label <- name_and_bic("a[1]", mod0)
+  a1_label <- name_and_bic("a[2]", mod1)
 
   d2 <- data.frame("Independent" = x, "Dependent" = y, "Curves" = replicate(n, true_label))
   d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y0, "Curves" = replicate(n, a0_label)))
@@ -65,8 +65,9 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
                      legend.margin = margin(0, 0, 0, 0),
                      legend.spacing.x = unit(0, "mm"),
                      legend.spacing.y = unit(0, "mm"))
-  fig <- fig + ggtitle("True Curve and Regression Curves")
-
+  fig <- fig + ggtitle("Example True and Fitted Curves")
+  fig <- fig + xlab(parse_format()("'Predictor'~X[p]")) 
+  fig <- fig + ylab(parse_format()("'Response'~X[r]"))
 
   return(fig)
 }
@@ -107,14 +108,14 @@ generate_example_data <- function(n, curve_name) {
 #seed <- 8
 #curve_name <- "Logistic"
 
-#seed <- 13
-#curve_name <- "Runge"
+seed <- 102 #9
+curve_name <- "Runge"
 
 #seed <- 17
 #curve_name <- "Michaelis-Menten"
 
-seed <- 22
-curve_name <- "Yield-Loss"
+#seed <- 22
+#curve_name <- "Yield-Loss"
 
 set.seed(seed)
 
