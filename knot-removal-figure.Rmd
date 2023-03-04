@@ -4,22 +4,27 @@ output: html_notebook
 ---
 
 ```{r}
+library(dplyr)
 library(ggplot2)
 library(ggpubr)
 library(ggh4x)
+library(scales)
 library(cladina)
 
 f_noise <- function(xs) {
-  return(rnorm(length(xs), 0, 0.2))
+ return(rnorm(length(xs), 0, 0.1))
 }
 
 f_signal <- function(x) {
-  y <- cos(pi * x)
-  return(y)
+#  y <- cos(pi * x)
+#  return(y)
+  return(x^5 - 10*x^4 + 35*x^3 - 50*x^2 + 24*x + 5)  
 }
 
 f_x_dist  <- function(n) {
-  return(rnorm(n))
+  
+  return(rlnorm(n, meanlog = 0.5, sdlog = 0.3))
+#  return(runif(n, 0, 4))
 }
 
 name_and_bic <- function(name, mod) {
@@ -28,12 +33,26 @@ name_and_bic <- function(name, mod) {
 }
 
 create_figure <- function(d, mod, title) {
-  fig <- ggplot(d, aes(Independent, Dependent))
+  x <- seq(from = min(d$Independent), to = max(d$Independent), length.out = 200)
+  y <- unlist(lapply(x, f_signal))
+  d_true <- data.frame("x" = x, "y" = y)
+  
+  boundaries <- cladina::extract_knots(mod)$Boundary.knots
+  x_fit <- d_true %>% filter(between(x, boundaries[[1]], boundaries[[2]])) %>% rename(Independent = x)
+  y_hat <- predict(mod, newdata = x_fit)
+  d_hat <- data.frame(x = x_fit$Independent, fitted = y_hat)
+  
+  
+  fig <- ggplot()
   fig <- fig + theme_bw()
   fig <- fig + force_panelsizes(rows = unit(3.5, "in"), cols = unit(3.5, "in"))
-  fig <- fig + geom_line(aes(y = SignalMeasured), linetype = "solid", color = "gray85", size = 1.7)
-  fig <- fig + geom_point(shape = 1, color = "gray50")
-  fig <- fig + geom_line(aes(y = mod$fitted.values), linetype = "solid", color = "black", size = 0.5)
+  fig <- fig + geom_line(data = d_true, aes(x = x, y = y), linetype = "solid", color = "gray85", size = 1.7)
+
+  fig <- fig + geom_point(data = d, aes(x = Independent, y = Dependent), shape = 1, color = "gray50")
+  fig <- fig + geom_line(data = d_hat, aes(x = x, y = fitted), linetype = "solid", color = "black", size = 1)
+  
+  fig <- fig + geom_vline(xintercept = boundaries)  
+  
   fig <- fig + ggtitle(title)
   fig <- fig + xlab(parse_format()("'Predictor'~X[p]")) 
   fig <- fig + ylab(parse_format()("'Response'~X[r]"))
@@ -41,21 +60,29 @@ create_figure <- function(d, mod, title) {
 }
 
 
-set.seed(4)
+#set.seed(13)
+set.seed(2)
 
 d <- cladina::generate_data(200, 2, 2, f_x_dist, f_signal, f_noise)
 
 k_max <- 5
-res <- cladina::suggest_splines(d, Dependent, Independent, k_max, all_knots = TRUE)
+
+d_o <- d %>% filter(between(Independent, quantile(Independent, .05), quantile(Independent, .95)))
+
+res <- cladina::suggest_splines(d_o, Dependent, Independent, k_max, all_knots = TRUE)
 
 i_max <- length(res$all_knots)
 fig_lowest_knots <- i_max
-knots_indices <- c(1, 5, 8, fig_lowest_knots)
+#knots_indices <- c(1, 5, 8, fig_lowest_knots)
+knots_indices <- c(1, 2, 3, 4)
 
 figs <- lapply(knots_indices, function(i) {
   knots <- res$all_knots[[i]]
-  mod <- cladina::model_by_knots(d, Dependent, Independent, 
+  mod <- cladina::model_by_knots(d_o, Dependent, Independent, 
                                  knots, res$Boundary.knots)
+  
+  print(knots)
+  
   return(create_figure(d, 
                 mod, 
                 paste("Knots: ", length(knots), ", BIC: ", round(BIC(mod), 0), sep = "")))
@@ -66,7 +93,7 @@ knot_removal_fig <- ggarrange(figs[[1]], figs[[2]], figs[[3]], figs[[4]], nrow =
 ggsave("example_figs/iteratively-removing-knots.png", plot = knot_removal_fig, device = "png", dpi = "print", height = 8.4, width = 8.4)
 
 k_lowest <- length(res$all_knots[[fig_lowest_knots]])
-mod_standard <- cladina::model_by_count(d, Dependent, Independent, k_lowest)
+mod_standard <- cladina::model_by_count(d_o, Dependent, Independent, k_lowest)
 fig_standard <- create_figure(d, 
                           mod_standard, 
                           paste("Knots: ", k_lowest, ", BIC: ", round(BIC(mod_standard), 0), sep = ""))
@@ -74,6 +101,7 @@ fig_standard <- create_figure(d,
 fig_standard = fig_standard + force_panelsizes(rows = unit(3.5, "in"),
                    cols = unit(3.5, "in"))
 
+plot(fig_standard)
 
 ggsave("example_figs/standard.png", plot = fig_standard, device = "png", height = 4.2, width = 4.2)
   
@@ -92,7 +120,7 @@ fig_bic_knot_cnts <- ggplot(d_knot_bics, aes(Knots, BIC)) +
                    cols = unit(7, "in")) +
   geom_point(shape = 15, color = "gray50") +
   scale_x_continuous(breaks = seq(0, 100, 20)) +
-  ggtitle("BIC scores for natural spline regressions with 0 to 100 knots")
+  ggtitle("BIC scores for RCS regressions with 0 to 100 knots")
   
 ggsave("example_figs/bic-and-knot-counts.png", plot = fig_bic_knot_cnts, device = "png", height = 4.2, width = 8)
 ```
