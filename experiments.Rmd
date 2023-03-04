@@ -86,8 +86,9 @@ f_signal <- function(x, curve_name) {
          "Logistic" = 1 / (1 + exp(-(x - 1.5) / 0.2)),
          "Runge" = 1 / (1 + (x - 2)^2),
          "Michaelis-Menten" = (x * 10) / (x + 2),
-         "Yield-Loss" = x / (0.5 + x))
-  return(y)
+         "Yield-Loss" = x / (0.5 + x),
+         "Quintic" = x^5 - 10*x^4 + 35*x^3 - 50*x^2 + 24*x + 5)
+    return(y)
 }
 
 f_x_dist  <- function(n) {
@@ -108,14 +109,18 @@ generate_example_data <- function(n, curve_name) {
 #seed <- 8
 #curve_name <- "Logistic"
 
-seed <- 102 #9
-curve_name <- "Runge"
+# seed <- 102 #9
+# curve_name <- "Runge"
 
 #seed <- 17
 #curve_name <- "Michaelis-Menten"
 
 #seed <- 22
 #curve_name <- "Yield-Loss"
+
+seed <- 29 #7
+curve_name <- "Quintic"
+
 
 set.seed(seed)
 
