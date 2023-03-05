@@ -1,0 +1,63 @@
+---
+title: "General regression figure"
+author: "Jo Inge Arnes"
+date: "2023-02-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Quintic function (<https://www.statisticshowto.com/quintic-function-polynomial/>)
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(ggh4x)
+library(scales)
+library(splines)
+library(cladina)
+
+create_figure <- function(d, mod, title) {
+  fig <- ggplot()
+  fig <- fig + theme_bw()
+  fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray50")
+  fig <- fig + ggtitle(title)
+  fig <- fig + xlab(parse_format()("'Predictor'~X[p]")) 
+  fig <- fig + ylab(parse_format()("'Response'~X[r]"))
+  
+  knots <- extract_knots(mod)
+  
+  fig <- fig + geom_vline(xintercept = knots$knots, linetype = "dashed")
+  fig <- fig + geom_vline(xintercept = knots$Boundary.knots, linetype = "solid")
+  
+  fig <- fig + geom_line(aes(x = mod$data$Independent, y = mod$fitted.values), linetype = "solid", color = "black", size = 0.5)
+
+  
+  fig <- fig + force_panelsizes(rows = unit(3.5, "in"), cols = unit(7, "in"))
+  
+  return(fig)
+}
+
+f <- function(x) {
+  return(x^5 - 10*x^4 + 35*x^3 - 50*x^2 + 24*x + 5)
+}
+
+n <- 250
+x <- runif(n, min = 0, max = 4)
+y <- f(x) + rnorm(n, 0, 0.5)
+
+d <- data.frame(Independent = x, Dependent = y)
+
+
+d_o <- d %>% filter(between(Independent, quantile(Independent, .05), quantile(Independent, .95)))
+  
+mod <- model_by_count(d_o, Dependent, Independent, 4)
+
+fig <- create_figure(d, mod, "Restricted Cubic Spline Regression")
+
+
+ggsave("example_figs/general-example.png", plot = fig, device = "png", height = 4.2, width = 8)
+```

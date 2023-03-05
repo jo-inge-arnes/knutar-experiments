@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r libraries, include = FALSE}
+library(dplyr)
 library(ggplot2)
 library(ggh4x)
 library(scales)
@@ -27,21 +28,25 @@ name_and_bic <- function(name, mod) {
 }
 
 plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
-  n = 200
+  n = 250
 
   x <- seq(from = min(d$Independent), to = max(d$Independent), length.out = n)
-  d_x <- data.frame(Independent = x)
   y <- unlist(lapply(x, f_curve))
-  y0 <- predict(mod0, newdata = d_x)
-  y1 <- predict(mod1, newdata = d_x)
+  d_x <- data.frame(Independent = x)
+
+  boundaries <- extract_knots(mod1)$Boundary.knots
+  d_o <- d_x %>% filter(between(Independent, boundaries[[1]], boundaries[[2]]))
+  n_o <- nrow(d_o)
+  y0 <- predict(mod0, newdata = d_o)
+  y1 <- predict(mod1, newdata = d_o)
 
   true_label <- "'True'"
   a0_label <- name_and_bic("a[1]", mod0)
   a1_label <- name_and_bic("a[2]", mod1)
 
   d2 <- data.frame("Independent" = x, "Dependent" = y, "Curves" = replicate(n, true_label))
-  d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y0, "Curves" = replicate(n, a0_label)))
-  d2 <- rbind(d2, data.frame("Independent" = x, "Dependent" = y1, "Curves" = replicate(n, a1_label)))
+  d2 <- rbind(d2, data.frame("Independent" = d_o$Independent, "Dependent" = y0, "Curves" = replicate(n_o, a0_label)))
+  d2 <- rbind(d2, data.frame("Independent" = d_o$Independent, "Dependent" = y1, "Curves" = replicate(n_o, a1_label)))
 
   d2$Curves <- factor(d2$Curves,
                       levels = c(true_label, a0_label, a1_label))
@@ -49,14 +54,15 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   fig <- ggplot(d2, aes(Independent, Dependent))
   fig <- fig + force_panelsizes(rows = unit(2.28, "in"), cols = unit(3.7, "in"))  
   fig <- fig + theme_bw()
+  fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray60")  
+  fig <- fig + geom_vline(xintercept = boundaries)
   fig <- fig + scale_linetype_manual(values = c("solid", "twodash", "solid"),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
-  fig <- fig + scale_color_manual(values = c("gray80", "black", "black"),
+  fig <- fig + scale_color_manual(values = c("gray70", "black", "black"),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
-  fig <- fig + scale_size_manual(values=c(1.7, 0.5, 0.5),
+  fig <- fig + scale_size_manual(values=c(1.7, 1, 1),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
   fig <- fig + geom_line(aes(linetype = Curves, color = Curves, size = Curves))
-  fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray50")
   fig <- fig + guides(shape = "none")
   fig <- fig + theme(legend.position = "top",
                      legend.justification = c("left","top"),
@@ -83,16 +89,14 @@ f_noise <- function(xs) {
 f_signal <- function(x, curve_name) {
   y <- switch(curve_name,
          "Trigonometric" = cos(pi * x),
-         "Logistic" = 1 / (1 + exp(-(x - 1.5) / 0.2)),
+         "Logistic" = 1 / (1 + exp(27 - 12*x)),
          "Runge" = 1 / (1 + (x - 2)^2),
-         "Michaelis-Menten" = (x * 10) / (x + 2),
-         "Yield-Loss" = x / (0.5 + x),
          "Quintic" = x^5 - 10*x^4 + 35*x^3 - 50*x^2 + 24*x + 5)
     return(y)
 }
 
 f_x_dist  <- function(n) {
-  return(rlnorm(n, meanlog = 0.3, sdlog = 0.4))
+  return(rlnorm(n, meanlog = 0.5, sdlog = 0.35))
 }
 
 generate_example_data <- function(n, curve_name) {
@@ -103,33 +107,29 @@ generate_example_data <- function(n, curve_name) {
 ```
 
 ```{r}
-#seed <- 8
+#seed <- 2
 #curve_name <- "Trigonometric"
 
-#seed <- 8
+#seed <- 1
 #curve_name <- "Logistic"
 
 # seed <- 102 #9
 # curve_name <- "Runge"
 
-#seed <- 17
-#curve_name <- "Michaelis-Menten"
-
-#seed <- 22
-#curve_name <- "Yield-Loss"
-
-seed <- 29 #7
+seed <- 5
 curve_name <- "Quintic"
 
 
 set.seed(seed)
 
-d <- generate_example_data(200, curve_name)
+d <- generate_example_data(250, curve_name)
+
+d_o <- d %>% filter(between(Independent, quantile(Independent, .05), quantile(Independent, .95)))
 
 max_knots <- 4
-suggested_cnt <- cladina::suggest_knotcount(d, Dependent, Independent, max_knots, stats::BIC)
-m0 <- model_by_count(d, Dependent, Independent, suggested_cnt$nknots)
-m1 <- choose_splines(d, Dependent, Independent,  max_nknots = max_knots, icr_fn = stats::BIC)$model
+suggested_cnt <- cladina::suggest_knotcount(d_o, Dependent, Independent, max_knots, stats::BIC)
+m0 <- model_by_count(d_o, Dependent, Independent, suggested_cnt$nknots)
+m1 <- choose_splines(d_o, Dependent, Independent,  max_nknots = max_knots, icr_fn = stats::BIC)$model
 ```
 
 ## Including Plots
@@ -140,14 +140,6 @@ f_signal_curried <- f_signal %-<% curve_name
 fig <- plot_curves_and_observations(d, f_signal_curried, m0, m1, curve_name)
 plot(fig)
 
-
-# Equidistant knots
-'
-x <- seq(from = min(d$Independent), to = max(d$Independent), length.out = 2)[2:length(x)-2]
-m2 <- model_by_knots(d, Dependent, Independent, x, c(min(d$Independent), max(d$Independent)))
-fig2 <- plot_curves_and_observations(d, f_signal_curried, m0, m2, curve_name)
-plot(fig2)
-'
 ```
 
 Save image

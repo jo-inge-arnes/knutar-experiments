@@ -16,15 +16,13 @@ f_noise <- function(xs) {
 }
 
 f_signal <- function(x) {
-#  y <- cos(pi * x)
-#  return(y)
-  return(x^5 - 10*x^4 + 35*x^3 - 50*x^2 + 24*x + 5)  
+  y <- cos(pi * x)
+  return(y)
+#  return(x^5 - 10*x^4 + 35*x^3 - 50*x^2 + 24*x + 5)  
 }
 
 f_x_dist  <- function(n) {
-  
-  return(rlnorm(n, meanlog = 0.5, sdlog = 0.3))
-#  return(runif(n, 0, 4))
+  return(rlnorm(n, meanlog = 0.5, sdlog = 0.35))
 }
 
 name_and_bic <- function(name, mod) {
@@ -65,7 +63,7 @@ set.seed(2)
 
 d <- cladina::generate_data(200, 2, 2, f_x_dist, f_signal, f_noise)
 
-k_max <- 5
+k_max <- 4
 
 d_o <- d %>% filter(between(Independent, quantile(Independent, .05), quantile(Independent, .95)))
 
@@ -74,7 +72,7 @@ res <- cladina::suggest_splines(d_o, Dependent, Independent, k_max, all_knots = 
 i_max <- length(res$all_knots)
 fig_lowest_knots <- i_max
 #knots_indices <- c(1, 5, 8, fig_lowest_knots)
-knots_indices <- c(1, 2, 3, 4)
+knots_indices <- c(1, 3, 5, 7)
 
 figs <- lapply(knots_indices, function(i) {
   knots <- res$all_knots[[i]]
@@ -109,7 +107,7 @@ ggsave("example_figs/standard.png", plot = fig_standard, device = "png", height 
 
 ```{r}
 
-knot_cnt_suggestions <- suggest_knotcount(d, Dependent, Independent, icr_fn = BIC, all_scores = TRUE)
+knot_cnt_suggestions <- suggest_knotcount(d_o, Dependent, Independent, icr_fn = BIC, all_scores = TRUE)
 d_knot_bics <- data.frame(
   Knots = unlist(knot_cnt_suggestions$all_scores$n_knots), BIC = unlist(knot_cnt_suggestions$all_scores$scores))
 
@@ -119,8 +117,8 @@ fig_bic_knot_cnts <- ggplot(d_knot_bics, aes(Knots, BIC)) +
   force_panelsizes(rows = unit(3.5, "in"),
                    cols = unit(7, "in")) +
   geom_point(shape = 15, color = "gray50") +
-  scale_x_continuous(breaks = seq(0, 100, 20)) +
-  ggtitle("BIC scores for RCS regressions with 0 to 100 knots")
+  scale_x_continuous(breaks = seq(0, 40, 5)) +
+  ggtitle("BIC scores for RCS regressions with 0 to 40 knots")
   
 ggsave("example_figs/bic-and-knot-counts.png", plot = fig_bic_knot_cnts, device = "png", height = 4.2, width = 8)
 ```
