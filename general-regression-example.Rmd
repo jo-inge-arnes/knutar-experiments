@@ -42,11 +42,11 @@ create_figure <- function(d, mod, title) {
 }
 
 f <- function(x) {
-  return(x^5 - 10*x^4 + 35*x^3 - 50*x^2 + 24*x + 5)
+  return(((4/3)*x - 5)*((4/3)*x - 4)*((4/3)*x - 3)*((4/3)*x - 2)*((4/3)*x-1))
 }
 
 n <- 250
-x <- runif(n, min = 0, max = 4)
+x <- runif(n, min = 0.5, max = 4)
 y <- f(x) + rnorm(n, 0, 0.5)
 
 d <- data.frame(Independent = x, Dependent = y)
