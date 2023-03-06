@@ -43,10 +43,10 @@ create_figure <- function(d, mod, title) {
   fig <- ggplot()
   fig <- fig + theme_bw()
   fig <- fig + force_panelsizes(rows = unit(3.5, "in"), cols = unit(3.5, "in"))
-  fig <- fig + geom_line(data = d_true, aes(x = x, y = y), linetype = "solid", color = "gray85", size = 1.7)
+  fig <- fig + geom_line(data = d_true, aes(x = x, y = y), linetype = "solid", color = "gray80", size = 1)
 
-  fig <- fig + geom_point(data = d, aes(x = Independent, y = Dependent), shape = 1, color = "gray50")
-  fig <- fig + geom_line(data = d_hat, aes(x = x, y = fitted), linetype = "solid", color = "black", size = 1)
+  fig <- fig + geom_point(data = d, aes(x = Independent, y = Dependent), shape = 1, color = "gray60", size = 1)
+  fig <- fig + geom_line(data = d_hat, aes(x = x, y = fitted), linetype = "solid", color = "black", size = 0.5)
   
   fig <- fig + geom_vline(xintercept = boundaries)  
   

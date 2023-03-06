@@ -93,7 +93,7 @@ f_signal <- function(x, curve_name) {
   y <- switch(curve_name,
          "Trigonometric" = cos(pi * x),
          "Logistic" = 1 / (1 + exp(27 - 12*x)),
-         "Runge" = 1 / (1 + (x - 2)^2),
+         "Runge" = 1 / (1 + ((3/2)*x - 4)^2),
          "Quintic" = ((4/3)*x - 5)*((4/3)*x - 4)*((4/3)*x - 3)*((4/3)*x - 2)*((4/3)*x-1))
     return(y)
 }
@@ -116,11 +116,11 @@ generate_example_data <- function(n, curve_name) {
 #seed <- 2
 #curve_name <- "Logistic"
 
-#seed <- 1
-#curve_name <- "Runge"
+seed <- 2
+curve_name <- "Runge"
 
-seed <- 4
-curve_name <- "Quintic"
+#seed <- 4
+#curve_name <- "Quintic"
 
 
 set.seed(seed)
