@@ -25,8 +25,8 @@ create_figure <- function(d, mod, title) {
   fig <- fig + theme_bw()
   fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray50")
   fig <- fig + ggtitle(title)
-  fig <- fig + xlab(parse_format()("'Predictor'~X[p]")) 
-  fig <- fig + ylab(parse_format()("'Response'~X[r]"))
+  fig <- fig + xlab(parse_format()("'Predictor'~X")) 
+  fig <- fig + ylab(parse_format()("'Response'~Y"))
   
   knots <- extract_knots(mod)
   

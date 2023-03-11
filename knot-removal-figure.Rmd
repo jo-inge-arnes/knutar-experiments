@@ -34,7 +34,10 @@ create_figure <- function(d, mod, title) {
   y <- unlist(lapply(x, f_signal))
   d_true <- data.frame("x" = x, "y" = y)
   
-  boundaries <- cladina::extract_knots(mod)$Boundary.knots
+  knots <- extract_knots(mod)
+  boundaries <- knots$Boundary.knots
+  knots <-knots$knots 
+    
   x_fit <- d_true %>% filter(between(x, boundaries[[1]], boundaries[[2]])) %>% rename(Independent = x)
   y_hat <- predict(mod, newdata = x_fit)
   d_hat <- data.frame(x = x_fit$Independent, fitted = y_hat)
@@ -42,17 +45,18 @@ create_figure <- function(d, mod, title) {
   
   fig <- ggplot()
   fig <- fig + theme_bw()
-  fig <- fig + force_panelsizes(rows = unit(3.5, "in"), cols = unit(3.5, "in"))
+#  fig <- fig + force_panelsizes(rows = unit(3.5/2, "in"), cols = unit(3.5, "in"))
+  fig <- fig + geom_vline(xintercept = knots, linetype = "dashed", color = "gray60")
   fig <- fig + geom_line(data = d_true, aes(x = x, y = y), linetype = "solid", color = "gray80", size = 1)
 
   fig <- fig + geom_point(data = d, aes(x = Independent, y = Dependent), shape = 1, color = "gray60", size = 1)
   fig <- fig + geom_line(data = d_hat, aes(x = x, y = fitted), linetype = "solid", color = "black", size = 0.5)
   
-  fig <- fig + geom_vline(xintercept = boundaries)  
+  fig <- fig + geom_vline(xintercept = boundaries) 
   
   fig <- fig + ggtitle(title)
-  fig <- fig + xlab(parse_format()("'Predictor'~X[p]")) 
-  fig <- fig + ylab(parse_format()("'Response'~X[r]"))
+  fig <- fig + xlab(parse_format()("'Predictor'~X")) 
+  fig <- fig + ylab(parse_format()("'Response'~Y"))
   return(fig)
 }
 
@@ -85,7 +89,7 @@ figs <- lapply(knots_indices, function(i) {
 
 knot_removal_fig <- ggarrange(figs[[1]], figs[[2]], figs[[3]], figs[[4]], nrow = 2, ncol = 2)
 
-ggsave("example_figs/iteratively-removing-knots.png", plot = knot_removal_fig, device = "png", dpi = "print", height = 8.4, width = 8.4)
+ggsave("example_figs/iteratively-removing-knots.png", plot = knot_removal_fig, device = "png", dpi = "print", height = 8.4/2, width = 8.4)
 
 k_lowest <- length(res$all_knots[[fig_lowest_knots]])
 mod_standard <- cladina::model_by_count(d_o, Dependent, Independent, k_lowest)
@@ -93,12 +97,13 @@ fig_standard <- create_figure(d,
                           mod_standard, 
                           paste("Knots: ", k_lowest, ", BIC: ", round(BIC(mod_standard), 0), sep = ""))
 
-fig_standard = fig_standard + force_panelsizes(rows = unit(3.5, "in"),
-                   cols = unit(3.5, "in"))
+#fig_standard = fig_standard + force_panelsizes(rows = unit(3.5/2, "in"), cols = unit(3.5/2, "in"))
 
-plot(fig_standard)
+fig_standard_compared <- ggarrange(figs[[4]], fig_standard, nrow = 1, ncol = 2)
 
-ggsave("example_figs/standard.png", plot = fig_standard, device = "png", height = 4.2, width = 4.2)
+plot(fig_standard_compared)
+
+ggsave("example_figs/standard.png", plot = fig_standard_compared, device = "png", height = 4.2/2, width = 8.4)
   
 ```
 

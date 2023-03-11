@@ -75,8 +75,8 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
                      legend.spacing.x = unit(0, "mm"),
                      legend.spacing.y = unit(0, "mm"))
   fig <- fig + ggtitle("Example True and Fitted Curves")
-  fig <- fig + xlab(parse_format()("'Predictor'~X[p]")) 
-  fig <- fig + ylab(parse_format()("'Response'~X[r]"))
+  fig <- fig + xlab(parse_format()("'Predictor'~X")) 
+  fig <- fig + ylab(parse_format()("'Response'~Y"))
 
   return(fig)
 }
@@ -116,11 +116,11 @@ generate_example_data <- function(n, curve_name) {
 #seed <- 2
 #curve_name <- "Logistic"
 
-seed <- 2
-curve_name <- "Runge"
+#seed <- 2
+#curve_name <- "Runge"
 
-#seed <- 4
-#curve_name <- "Quintic"
+seed <- 4
+curve_name <- "Quintic"
 
 
 set.seed(seed)
