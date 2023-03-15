@@ -16,6 +16,7 @@ library(ggh4x)
 library(scales)
 library(cladina)
 library(curry)
+library(rvmethod)
 ```
 
 ## Results
@@ -24,7 +25,7 @@ library(curry)
 
 name_and_bic <- function(name, mod) {
   k <- length(extract_knots(mod)$knots)
-  return(paste(name, "~'(Knots: ", k, ", BIC: ", round(BIC(mod)), ")'", sep = ""))
+  return(paste(name, "~'(BIC: ", round(BIC(mod)), ")'", sep = ""))
 }
 
 plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
@@ -33,12 +34,12 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   boundaries <- extract_knots(mod1)$Boundary.knots
     
   #x <- seq(from = min(boundaries[[1]]), to = max(boundaries[[2]]), length.out = n)
-  x <- seq(from = min(d$Independent), to = max(d$Independent), length.out = n)  
+  x <- seq(from = min(d$IndependentRaw), to = max(d$IndependentRaw), length.out = n)  
   y <- unlist(lapply(x, f_curve))
-  d_x <- data.frame(Independent = x)
+  d_x <- data.frame(IndependentRaw = x)
 
 
-  d_o <- d_x %>% filter(between(Independent, boundaries[[1]], boundaries[[2]]))
+  d_o <- d_x #   %>% filter(between(IndependentRaw, boundaries[[1]], boundaries[[2]]))
   n_o <- nrow(d_o)
   y0 <- predict(mod0, newdata = d_o)
   y1 <- predict(mod1, newdata = d_o)
@@ -47,17 +48,17 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   a0_label <- name_and_bic("a[1]", mod0)
   a1_label <- name_and_bic("a[2]", mod1)
 
-  d2 <- data.frame("Independent" = x, "Dependent" = y, "Curves" = replicate(n, true_label))
-  d2 <- rbind(d2, data.frame("Independent" = d_o$Independent, "Dependent" = y0, "Curves" = replicate(n_o, a0_label)))
-  d2 <- rbind(d2, data.frame("Independent" = d_o$Independent, "Dependent" = y1, "Curves" = replicate(n_o, a1_label)))
+  d2 <- data.frame("IndependentRaw" = x, "DependentRaw" = y, "Curves" = replicate(n, true_label))
+  d2 <- rbind(d2, data.frame("IndependentRaw" = d_o$IndependentRaw, "DependentRaw" = y0, "Curves" = replicate(n_o, a0_label)))
+  d2 <- rbind(d2, data.frame("IndependentRaw" = d_o$IndependentRaw, "DependentRaw" = y1, "Curves" = replicate(n_o, a1_label)))
 
   d2$Curves <- factor(d2$Curves,
                       levels = c(true_label, a0_label, a1_label))
 
-  fig <- ggplot(d2, aes(Independent, Dependent))
+  fig <- ggplot(d2, aes(IndependentRaw, DependentRaw))
   fig <- fig + force_panelsizes(rows = unit(2.28, "in"), cols = unit(3.7, "in"))  
   fig <- fig + theme_bw()
-  fig <- fig + geom_point(data = d, aes(Independent, Dependent), shape = 1, color = "gray60", size = 1)  
+  fig <- fig + geom_point(data = d, aes(IndependentRaw, DependentRaw), shape = 1, color = "gray60", size = 1)  
   fig <- fig + scale_linetype_manual(values = c("solid", "twodash", "solid"),
                      labels = parse_format()(c(true_label, a0_label, a1_label)))
   fig <- fig + scale_color_manual(values = c("gray80", "black", "black"),
@@ -91,10 +92,10 @@ f_noise <- function(xs) {
 
 f_signal <- function(x, curve_name) {
   y <- switch(curve_name,
-         "Trigonometric" = cos(pi * x),
+         "Trigonometric" = cos(1.5*pi * x),
          "Logistic" = 1 / (1 + exp(27 - 12*x)),
          "Runge" = 1 / (1 + ((3/2)*x - 4)^2),
-         "Quintic" = ((4/3)*x - 5)*((4/3)*x - 4)*((4/3)*x - 3)*((4/3)*x - 2)*((4/3)*x-1))
+         "Gaussians" = 1.5*gaussfunc(x, 1, 0.5) + gaussfunc(x, 2.75, 0.5))
     return(y)
 }
 
@@ -102,37 +103,50 @@ f_x_dist  <- function(n) {
   return(rlnorm(n, meanlog = 0.5, sdlog = 0.35))
 }
 
+f_x_unif <-  function(n) {
+  return(runif(n, 0, 4))
+}
+
 generate_example_data <- function(n, curve_name) {
   f_signal_curried <- f_signal %-<% curve_name
+  
+  if (curve_name == "Gaussians")
+    f_x_dist <- f_x_unif
+  
   d <- generate_data(n, 2, 2, f_x_dist, f_signal_curried, f_noise)
   return(d)
 }
 ```
 
 ```{r}
-#seed <- 2
-#curve_name <- "Trigonometric"
+seed <- 4
+curve_name <- "Trigonometric"
 
-#seed <- 2
+#seed <- 3
 #curve_name <- "Logistic"
 
-#seed <- 2
+#seed <- 1
 #curve_name <- "Runge"
 
-seed <- 4
-curve_name <- "Quintic"
+#seed <- 8
+#curve_name <- "Quintic"
 
+#seed <- 3
+#curve_name <- "Gaussians"
 
 set.seed(seed)
 
 d <- generate_example_data(250, curve_name)
 
-d_o <- d %>% filter(between(Independent, quantile(Independent, .05), quantile(Independent, .95)))
+boundary_knots <-c(quantile(d$IndependentRaw, .05), quantile(d$IndependentRaw, .95))
+#boundary_knots <- NA
 
-max_knots <- 4
-suggested_cnt <- cladina::suggest_knotcount(d_o, Dependent, Independent, max_knots, stats::BIC)
-m0 <- model_by_count(d_o, Dependent, Independent, suggested_cnt$nknots)
-m1 <- choose_splines(d_o, Dependent, Independent,  max_nknots = max_knots, icr_fn = stats::BIC)$model
+#d <- d %>% filter(between(IndependentRaw, quantile(d$IndependentRaw, .05), quantile(d$IndependentRaw, .95)))
+
+max_knots <- 3
+suggested_cnt <- suggest_knotcount(d, DependentRaw, IndependentRaw, max_nknots = max_knots, boundary_knots = boundary_knots)
+m0 <- model_by_count(d, DependentRaw, IndependentRaw, suggested_cnt$nknots, boundary_knots = boundary_knots)
+m1 <- choose_splines(d, DependentRaw, IndependentRaw,  max_nknots = max_knots, boundary_knots = boundary_knots)$model
 ```
 
 ## Including Plots

@@ -9,8 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Quintic function (<https://www.statisticshowto.com/quintic-function-polynomial/>)
-
 ```{r}
 library(dplyr)
 library(ggplot2)
@@ -19,6 +17,7 @@ library(ggh4x)
 library(scales)
 library(splines)
 library(cladina)
+library(rvmethod)
 
 create_figure <- function(d, mod, title) {
   fig <- ggplot()
@@ -42,19 +41,18 @@ create_figure <- function(d, mod, title) {
 }
 
 f <- function(x) {
-  return(((4/3)*x - 5)*((4/3)*x - 4)*((4/3)*x - 3)*((4/3)*x - 2)*((4/3)*x-1))
+  return((x - 4)*(x - 3)*(x - 2)*(x - 1)*(x))
 }
 
 n <- 250
-x <- runif(n, min = 0.5, max = 4)
+x <- runif(n, min = 0, max = 3.5)
 y <- f(x) + rnorm(n, 0, 0.5)
 
 d <- data.frame(Independent = x, Dependent = y)
 
-
-d_o <- d %>% filter(between(Independent, quantile(Independent, .05), quantile(Independent, .95)))
+boundary_knots <-c(quantile(d$Independent, .05), quantile(d$Independent, .95))
   
-mod <- model_by_count(d_o, Dependent, Independent, 4)
+mod <- model_by_count(d, Dependent, Independent, 3, boundary_knots = boundary_knots)
 
 fig <- create_figure(d, mod, "Restricted Cubic Spline Regression")
 
