@@ -25,7 +25,7 @@ library(rvmethod)
 
 name_and_bic <- function(name, mod) {
   k <- length(extract_knots(mod)$knots)
-  return(paste(name, "~'(BIC: ", round(BIC(mod)), ")'", sep = ""))
+  return(paste(name, "~'curve (BIC: ", round(BIC(mod)), ")'", sep = ""))
 }
 
 plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
@@ -44,7 +44,7 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
   y0 <- predict(mod0, newdata = d_o)
   y1 <- predict(mod1, newdata = d_o)
 
-  true_label <- "'True'"
+  true_label <- "'true curve'"
   a0_label <- name_and_bic("a[1]", mod0)
   a1_label <- name_and_bic("a[2]", mod1)
 
@@ -75,10 +75,12 @@ plot_curves_and_observations <- function(d, f_curve, mod0, mod1, curve_name) {
                      legend.margin = margin(0, 0, 0, 0),
                      legend.spacing.x = unit(0, "mm"),
                      legend.spacing.y = unit(0, "mm"))
-  fig <- fig + ggtitle("Example True and Fitted Curves")
+  fig <- fig + ggtitle("True and Fitted Curves Example")
   fig <- fig + xlab(parse_format()("'Predictor'~X")) 
   fig <- fig + ylab(parse_format()("'Response'~Y"))
-
+  fig <- fig + annotate(geom = "point", x = extract_knots(mod0)$knots, y = Inf, shape = 25, fill = "black", size = 2)
+  fig <- fig + annotate(geom = "point", x = extract_knots(mod1)$knots, y = -Inf, shape = 24, fill = "black", size = 2)
+  
   return(fig)
 }
 ```
