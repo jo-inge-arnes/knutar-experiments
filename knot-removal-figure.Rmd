@@ -9,7 +9,7 @@ library(ggplot2)
 library(ggpubr)
 library(ggh4x)
 library(scales)
-library(cladina)
+library(knutar)
 
 f_noise <- function(xs) {
  return(rnorm(length(xs), 0, 0.1))
@@ -64,13 +64,13 @@ create_figure <- function(d, mod, title) {
 
 set.seed(4)
 
-d <- cladina::generate_data(250, 2, 2, f_x_dist, f_signal, f_noise)
+d <- knutar::generate_data(250, 2, 2, f_x_dist, f_signal, f_noise)
 
 k_max <- 3
 
 boundary_knots <-c(quantile(d$IndependentRaw, .05), quantile(d$IndependentRaw, .95))
 
-res <- cladina::suggest_splines(d, DependentRaw, IndependentRaw, k_max, 
+res <- knutar::suggest_splines(d, DependentRaw, IndependentRaw, k_max, 
                                 all_knots = TRUE, 
                                 boundary_knots = boundary_knots)
 
@@ -80,7 +80,7 @@ knots_indices <- c(1, 6, 11, fig_lowest_knots)
 
 figs <- lapply(knots_indices, function(i) {
   knots <- res$all_knots[[i]]
-  mod <- cladina::model_by_knots(d, DependentRaw, IndependentRaw, 
+  mod <- knutar::model_by_knots(d, DependentRaw, IndependentRaw, 
                                  knots, res$Boundary.knots)
   
   print(knots)

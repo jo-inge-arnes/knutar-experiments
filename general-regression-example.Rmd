@@ -16,7 +16,7 @@ library(ggpubr)
 library(ggh4x)
 library(scales)
 library(splines)
-library(cladina)
+library(knutar)
 library(rvmethod)
 
 create_figure <- function(d, mod, title) {

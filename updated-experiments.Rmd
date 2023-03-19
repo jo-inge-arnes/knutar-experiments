@@ -1,7 +1,11 @@
 ```{r}
-library(cladina)
+library(knutar)
 library(dplyr)
 library(rvmethod)
+library(ggplot2)
+library(ggh4x)
+library(scales)
+library(purrr)
 
 ```
 
@@ -172,10 +176,9 @@ B <- 2000
 
 ## List of functions for for generating samples for different curves
 generators <- list(
-#  list("name" = "Quintic", "fn" = generate_quintic, "curve_fn" = f_signal_quintic),
-#  list("name" = "Logistic", "fn" = generate_logistic, "curve_fn" = f_signal_logistic),
-#  list("name" = "Runge", "fn" = generate_runge, "curve_fn" = f_signal_runge) #,
-#  list("name" = "Trigonometric", "fn" = generate_trigonometric, "curve_fn" = f_signal_trigonometric),
+  list("name" = "Logistic", "fn" = generate_logistic, "curve_fn" = f_signal_logistic),
+  list("name" = "Runge", "fn" = generate_runge, "curve_fn" = f_signal_runge),
+  list("name" = "Trigonometric", "fn" = generate_trigonometric, "curve_fn" = f_signal_trigonometric),
   list("name" = "Gaussians", "fn" = generate_gaussians, "curve_fn" = f_signal_gaussians)
   )
 
@@ -210,71 +213,19 @@ write.csv(df_sample_stats, paste(file_name, ".csv", sep = ""), row.names = FALSE
 Estimation of population mean differences for BIC scores for a_1 and a_2 models
 
 ```{r}
-library(boot)
-
 compute_mean_ci <- function(d) {
   # Compute 95% CI for the mean difference in BIC for a_1 and a_2.
 
-#  if (shapiro.test(d$bic_a1)$p.value >= 0.05 && shapiro.test(d$bic_a2)$p.value >= 0.05) {
     t_res <- t.test(d$bic_a1, d$bic_a2, paired = TRUE, alternative = "two.sided")
     mean_ci <- list(test.type = "t-test", conf.int = t_res$conf.int, p.value = t_res$p.value, statistic = t_res$statistic)
-#  } else {
-#    b1 <- boot(d$bic_diff, function(u, i) mean(u[i]), R = 1000)
-#    b_res <- boot.ci(b1, type = c("norm"))
-#    mean_ci <- list(test.type = "bootstrap", conf.int = c(b_res$normal[2], b_res$normal[3]), R.value = b_res$R)
-#  }
-  
+
   return(mean_ci)
 }
-```
-
-Bar-chart with pairwise better, equal, worse BICs for a_1 and a_2 models
-
-```{r}
-library(ggplot2)
-library(ggh4x)
-library(scales)
-
-plot_bic_difference_categories <- function(d, mean_ci, curve_name, m, n) {
-  d$bic_diff_cats <- cut(d$bic_diff, c(-Inf, -0.5, 0.5, Inf), c("Worse", "Equally good", "Better"), right = FALSE) 
-  
-  
-  print(paste("BIC diff cats: ",   d %>% group_by(bic_diff_cats) %>% summarise(count=n())))
-  
-  title <- paste("'Results Categorized by'~BIC[1]~-~BIC[2]", sep = "")
-
-  if (mean_ci$test.type == "t-test") {
-    p_str <- paste("p = ", signif(mean_ci$p.value, digits = 3), sep = "")
-  } else {
-    p_str <- paste("R = ", signif(mean_ci$R.value, digits = 3), sep = "")
-  }
- 
-  ci_str <- paste(" 95% CI[", signif(mean_ci$conf.int[1], digits = 3), ", ", signif(mean_ci$conf.int[2], digits = 3), "]", sep = "")
-  
-  m_n_str <- ""
-  #m_n_str <- paste(m, " samples of n = ", n, ", ", sep = "")
-  
-#  subtitle <- paste("'", m_n_str, mean_ci$test.type, "'~mu~'", ci_str, ", ", p_str, "'", sep = "")
-#  subtitle <- paste("'", m_n_str, "'~mu~'", ci_str, ", ", p_str, "'", sep = "")
-
-  
-  fig_cats <- ggplot(d, aes(x = bic_diff_cats)) + 
-    force_panelsizes(rows = unit(2, "in"), cols = unit(3.5, "in")) +
-    theme_bw() +
-    geom_bar() +
-    ggtitle(parse_format()(title)) + #, parse_format()(subtitle)) +
-    xlab("Differences <= |1| are equally good") + 
-    ylab("Count")  
-  
-  return(fig_cats)
-}
-
 ```
 
 Process results grouped by generator and sample size
 
 ```{r}
-library(purrr)
 
 num_generators <- length(generators)
 num_sample_sizes <- length(sample_sizes)
@@ -297,28 +248,13 @@ process_result_group <- function(generator_and_size_index) {
   print("BIC")
   print(mean_ci)
   
-  # Plot bar-chart with categories better, equal, worse BIC scores for a_2 compared to a_1
-#  fig <- plot_bic_difference_categories(d, mean_ci, curve_name, B, n)
-#  plot(fig)
-  
-  # Save plots
-#  fig_file_name <- paste("figs_", experiment_finished_time, "/", curve_name, "_", B, "_", n, "_%s_s_", seed,".png",sep = "")
-#  fig_file_name <- gsub("[ :-]", "_", fig_file_name)
-#  fig_file_name <- paste("", tolower(fig_file_name), sep = "")
-  
-#  ggsave(gsub("[, ]", "", toString(sprintf(fig_file_name, "bic"))), plot = fig, device = "png", dpi = "print", height = 3, width = 4)
-  
   t_res <- t.test(d$p_a1, d$p_a2, paired = TRUE, alternative = "two.sided")
   mean_ci <- list(test.type = "t-test", conf.int = t_res$conf.int, p.value = t_res$p.value, statistic = t_res$statistic)
 
   print("Performance")
   print(formatC(mean_ci$conf.int, format = "e", digits = 3))
   format(mean_ci$p.value, scientific = TRUE)
-
-  
-#  print(paste("Is p-value exactly 0? ", identical(mean_ci$p.value, integer(0))))
-#  print(sprintf("The number is %.1000f", mean_ci$p.value))  
-  
+ 
   print(paste("mean knot diff: ", mean(d$nknots_diff)))
 }
 
