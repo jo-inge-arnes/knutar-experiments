@@ -1,5 +1,5 @@
 # Knutar Experiments
-Experiments accompanying the paper
+Experiments accompanying the paper [Greedy Knot Selection Algorithm for Restricted Cubic Spline Regression](https://doi.org/10.21203/rs.3.rs-2708178/v1).
 
 `example-curves.Rmd` generates figures illustrating ground truth, a_1,
 and a_2 curves for a sample.
