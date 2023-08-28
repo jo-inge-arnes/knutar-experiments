@@ -1,5 +1,5 @@
 # Knutar Experiments
-This repository contains the code for generating data, running the experiments, and creating the figures accompanying the paper [Greedy Knot Selection Algorithm for Restricted Cubic Spline Regression](https://doi.org/10.21203/rs.3.rs-2708178/v1).
+This repository contains the code for generating data, running the experiments, and creating the figures accompanying the paper Greedy Knot Selection Algorithm for Restricted Cubic Spline Regression.
 
 `example-curves.Rmd` generates figures illustrating ground truth, a_1,
 and a_2 curves for a sample.
