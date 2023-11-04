@@ -34,12 +34,11 @@ hpp.explore %>%
 
 boundary_knots <-c(quantile(d$age.dec, .05), quantile(d$age.dec, .95))
 
-max_knots <- 2
+max_knots <- 3
 
 m0 <- model_by_count(d, nwsize, age.dec, max_knots,
   boundary_knots = boundary_knots)
-m1 <- choose_splines(d, nwsize, age.dec,  max_nknots = max_knots,
-  boundary_knots = boundary_knots)$model
+m1 <- choose_splines(d, nwsize, age.dec,  max_nknots = max_knots, boundary_knots = boundary_knots)$model
 
 fig <- create_figure(d, m0, "quantiles")
 plot(fig)
