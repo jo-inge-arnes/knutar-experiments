@@ -32,7 +32,7 @@ d <- mcycle
 
 boundary_knots <-c(quantile(d$times, .05), quantile(d$times, .95))
 
-max_knots <- 3
+max_knots <- 5
 
 suggested_cnt <- suggest_knotcount(d, accel, times, max_nknots = max_knots,
   boundary_knots = boundary_knots)
